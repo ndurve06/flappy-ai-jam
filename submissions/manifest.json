@@ -8,38 +8,38 @@
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "technical-execution",
-      "description": "The starting point for every build. Flap through the gates and beat your best score.",
+      "description": "The gentle three-life starter. Flap through the gaps with Space, the up arrow or tap.",
       "prompt": null
     },
     {
       "id": "01-neural-autopilot",
       "kind": "reference",
-      "title": "Autonomous Trajectory Solver",
+      "title": "Autopilot",
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "technical-execution",
-      "description": "Watch the drone plan a safe path through moving gates and commit to each thrust.",
-      "prompt": "Add an A-key autopilot that plans flap-or-coast decisions using the existing fixed-step physics. Draw its predicted flight path, the target gate, and a ray showing the remaining distance to the gate."
+      "description": "Watch the game plan its own flight path, then switch the autopilot off and try it yourself.",
+      "prompt": "Add an autopilot that plans flap-or-coast decisions using the game’s fixed-step physics. Draw its predicted flight path and let me switch back to manual controls. Keep the demo in continuous practice."
     },
     {
       "id": "02-voice-frequency-thruster",
       "kind": "reference",
-      "title": "Acoustic Pitch Controller",
+      "title": "Voice flight",
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "game-feel",
-      "description": "Thrust with a short voice pulse or whistle while the arena displays the live spectrum.",
-      "prompt": "Use the browser microphone locally to trigger thrust from short voice pulses or high whistles. Draw a 64-band spectrum behind the gates and keep Space and tap working when the mic is unavailable."
+      "description": "Flap with Space, tap, or your voice. The mic is optional and sound stays on your device.",
+      "prompt": "Use the browser microphone locally to flap when I speak. Show a spectrum behind the game, and keep Space and tap working if the mic is unavailable. Use wide gaps and recovery so visitors can keep playing."
     },
     {
       "id": "03-overclock-boss-protocol",
       "kind": "reference",
-      "title": "Overclock Boss Protocol",
+      "title": "Boss rush",
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "creative-mutation",
-      "description": "Dash through projectile patterns in a boss encounter that starts every ten gates.",
-      "prompt": "Add a short Shift dash with a cooldown, screen shake, and a directional particle burst. Every ten gates, pause the pipe stream, warn the player, then spawn a Firewall Core that alternates projectile patterns."
+      "description": "Meet the boss straight away. Dash through a wave, then fly through the gates. Bumps let you keep going.",
+      "prompt": "Add a Shift or on-screen dash that gives a short shield. Show a slow, clearly signalled boss wave at the start, then alternate gates and boss waves. Let the player recover after bumps for live demos."
     }
   ]
 }
