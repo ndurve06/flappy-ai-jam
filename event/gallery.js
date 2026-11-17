@@ -1,9 +1,4 @@
-import { loadEvent, loadManifest, awardsFor, publicGameUrl, repository } from "./state.js";
-const tracks = {
-  "technical-execution": "Technical Execution",
-  "game-feel": "Game Feel",
-  "creative-mutation": "Creative Mutation",
-};
+import { loadEvent, loadManifest, awardsFor, publicGameUrl } from "./state.js";
 const curated = new Map([
   ["baseline", { path: "index.html", controls: "Use Space, the up arrow or tap to thrust." }],
   ["01-neural-autopilot", { path: "examples/01-neural-autopilot.html", controls: "Press A or select Autopilot to start the trajectory solver." }],
@@ -20,7 +15,6 @@ const palette = Object.fromEntries(["deep","ink","line","navy","sea","sage","gol
   (name) => [name, css.getPropertyValue("--" + name).trim()]));
 let builds = [];
 let event = null;
-let filter = "submission";
 let frame;
 let active;
 let loaded = false;
@@ -102,8 +96,7 @@ function validBuild(build) {
   if (!build || typeof build.id !== "string" || !handlePattern.test(build.id)
     || typeof build.title !== "string" || !build.title
     || typeof build.builder !== "string" || !build.builder
-    || typeof build.github !== "string" || !handlePattern.test(build.github)
-    || !Object.hasOwn(tracks, build.track)) return false;
+    || typeof build.github !== "string" || !handlePattern.test(build.github)) return false;
   const expectedKind = build.id === "baseline" ? "baseline" : curated.has(build.id) ? "reference" : "submission";
   const expectedId = build.assisted === true ? "entry--" + build.issue : build.github.toLowerCase();
   return build.kind === expectedKind && (expectedKind !== "submission" ||
@@ -115,9 +108,6 @@ function card(build) {
   const result = element("article", "", "card");
   const body = element("div", "", "card-body");
   const badges = element("div", "", "badges");
-  badges.append(element("span", tracks[build.track], "badge"));
-  if (build.kind === "reference") badges.append(element("span", "Reference mod", "badge"));
-  if (build.kind === "baseline") badges.append(element("span", "Starter", "badge"));
   for (const award of awardsFor(event, build)) {
     badges.append(element("span", award, "badge winner"));
   }
@@ -138,13 +128,14 @@ function card(build) {
       }
     } catch { /* Optional profile links may be omitted. */ }
   }
-  body.append(badges, element("h3", build.title), byline);
+  if (badges.childElementCount) body.append(badges);
+  body.append(element("h3", build.title), byline);
   if (typeof build.description === "string" && build.description) body.append(element("p", build.description));
   if (typeof build.prompt === "string" && build.prompt) {
     const details = element("details");
     const pre = element("pre");
     pre.append(element("code", build.prompt));
-    details.append(element("summary", "Prompt used"), pre);
+    details.append(element("summary", "What they asked the AI"), pre);
     body.append(details);
   }
   const launch = element("button", "Play build", "action primary launch");
@@ -158,25 +149,26 @@ function card(build) {
 
 function render() {
   if (!loaded) return;
-  const visible = builds.filter((build) => filter === "winner"
-    ? awardsFor(event, build).length > 0
-    : build.kind === "submission");
+  const visible = builds.filter((build) => build.kind === "submission");
   byId("grid").replaceChildren(...visible.map(card));
   byId("count").textContent = visible.length + (visible.length === 1 ? " build" : " builds");
   const message = byId("message");
   message.hidden = Boolean(visible.length);
-  message.textContent = filter === "winner" ? "Awards will appear here after judging." : "Approved entries will appear here. Try a reference game while you wait.";
+  message.textContent = "Games will appear here as they’re checked. Try an example while you wait.";
 }
 
 function renderEvent() {
   const status = event?.state;
-  byId("submit-action").hidden = status === "open" || status === "closed";
-  byId("submit-status").hidden = status !== "open" && status !== "closed";
-  byId("assisted-submit").hidden = !byId("submit-status").hidden;
+  const entriesClosed = status === "open" || status === "closed";
+  byId("submit-instructions").hidden = entriesClosed;
+  byId("submit-status").hidden = !entriesClosed;
+  const voteLink = byId("vote-link");
+  voteLink.hidden = !entriesClosed;
+  voteLink.textContent = status === "closed" ? "See the vote results" : "Choose your favourite";
   byId("vote-status").textContent = {
-    open: "Voting is open. Pick a favourite from the approved builds.",
-    closed: "The audience vote is closed. View the results on the voting page.",
-    pending: "Voting opens once the committee has checked the entries."
+    open: "Voting is open. You can vote in the room or online.",
+    closed: "Voting has closed.",
+    pending: "Voting opens after the demos."
   }[status] ?? "Check the ballot for the latest status.";
 
   const awards = [];
@@ -217,14 +209,21 @@ function launchBuild(build) {
   byId("share-url").hidden = true;
   const known = curated.get(build.id);
   const gameUrl = known?.path ?? publicGameUrl(build.url);
-  const source = byId("source");
-  source.href = known ? repository + "/blob/main/" + known.path : repository + "/issues/" + build.issue;
-  source.textContent = known ? "Fork / View Source" : "View submission";
+  const target = new URL(gameUrl, location.href);
+  const gemini = target.hostname === "gemini.google.com"
+    || (target.hostname === "g.co" && target.pathname.startsWith("/gemini/share/"));
   byId("open-game").href = gameUrl;
   byId("player-controls").textContent = known?.controls ??
     "If the preview is blocked or the controls do not respond, open the game in a new tab.";
   frameMessage.hidden = false;
+  frameMessage.textContent = gemini ? "This game opens in Gemini. Use the button above to play it." : "Loading game…";
+  frameBox.classList.toggle("external-preview", gemini);
   if (!dialog.open) dialog.showModal();
+  if (gemini) {
+    byId("player-controls").textContent = "Open the link in your browser. If Gemini asks you to sign in or the preview is unavailable, try a different game.";
+    byId("open-game").focus();
+    return;
+  }
   resizeFrame();
 
   const preview = element("iframe");
@@ -262,20 +261,6 @@ byId("copy").addEventListener("click", async () => {
 });
 if (typeof ResizeObserver === "function") new ResizeObserver(resizeFrame).observe(frameBox);
 else window.addEventListener("resize", resizeFrame);
-
-document.querySelectorAll("[data-filter]").forEach((button) => {
-  button.addEventListener("click", () => {
-    filter = button.dataset.filter;
-    document.querySelectorAll("[data-filter]").forEach((candidate) => {
-      candidate.setAttribute("aria-pressed", String(candidate === button));
-    });
-    render();
-  });
-});
-
-byId("show-winners").addEventListener("click", () => {
-  document.querySelector('[data-filter="winner"]').click();
-});
 
 let manifestKey;
 let eventKey;

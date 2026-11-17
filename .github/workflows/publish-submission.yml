@@ -13,10 +13,13 @@ on:
         default: deploy
         options: [deploy, open-voting, close-voting, publish-winners]
       technical_id:
-        description: Best Engineered build ID (required for publish-winners)
+        description: 'Best Engineered build ID or #ballot number'
         type: string
       creative_id:
-        description: Most Unhinged Prompt build ID (required for publish-winners)
+        description: 'Most Unhinged Prompt build ID or #ballot number'
+        type: string
+      paper_votes:
+        description: 'Paper tally for close-voting (e.g. 1=4, 2=3)'
         type: string
 
 permissions: {}

@@ -13,8 +13,10 @@ const projector = new URLSearchParams(location.search).has("projector");
 byId("ballot").hidden = projector;
 byId("projector").hidden = !projector;
 const ballotUrl = new URL("vote.html", location.href).href;
-const qr = byId(projector ? "projector-qr" : "share-qr");
-qr.hidden = !drawQr(qr, ballotUrl);
+if (projector) {
+  const qr = byId("projector-qr");
+  qr.hidden = !drawQr(qr, ballotUrl);
+}
 
 const full = byId("fullscreen");
 if (document.fullscreenEnabled) {
@@ -43,7 +45,7 @@ function galleryLink(candidate) {
 }
 
 function renderChoices(event) {
-  for (const candidate of event.candidates) {
+  for (const [index, candidate] of event.candidates.entries()) {
     const row = element("div");
     row.className = "choice";
     const radio = element("input");
@@ -52,7 +54,7 @@ function renderChoices(event) {
     radio.id = "candidate-" + candidate.id;
     radio.value = candidate.id;
     radio.required = true;
-    const label = element("label", candidate.title);
+    const label = element("label", (index + 1) + ". " + candidate.title);
     label.htmlFor = radio.id;
     label.append(element("small", candidate.builder));
     const play = element("a", "Play ↗︎");
@@ -63,10 +65,13 @@ function renderChoices(event) {
     row.append(radio, label, play);
     choices.append(row);
   }
-  cast.href = repository + "/issues/" + event.issue;
+  cast.href = repository + "/issues/" + event.issue + "#new_comment_field";
 }
 
 form.addEventListener("change", () => { byId("vote-code").hidden = true; });
+byId("prepare").addEventListener("click", () => {
+  if (!choices.querySelector(":checked")) choices.querySelector("input")?.focus();
+});
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const build = new FormData(form).get("build");
@@ -75,9 +80,9 @@ form.addEventListener("submit", async (event) => {
   byId("vote-code").hidden = false;
   try {
     await navigator.clipboard.writeText(comment.value);
-    byId("copy-note").textContent = "Vote copied. Continue to GitHub and post it.";
+    byId("copy-note").textContent = "Copied. Open GitHub, paste your ballot and press Comment.";
   } catch {
-    byId("copy-note").textContent = "Copy the selected line, then continue to GitHub.";
+    byId("copy-note").textContent = "Copy the selected text, open GitHub, paste it and press Comment.";
     comment.select();
     return;
   }
@@ -104,19 +109,24 @@ async function refresh() {
     const closed = event.state === "closed";
     status.textContent = open ? "Voting is open."
       : closed ? "Voting is closed."
-      : "Voting opens once the committee has checked the submitted builds.";
-    projectorStatus.textContent = open ? "Choose your favourite build and cast your vote on GitHub."
+      : "Voting opens after the demos. You can try the games in the Hall of Fame while you wait.";
+    projectorStatus.textContent = open ? "Pick one game. Use a paper slip or scan to vote online."
       : closed ? "Voting has closed. Scan to see the results."
       : "Scan to open the ballot. Voting starts after the demos.";
     choices.replaceChildren();
     form.hidden = !open;
     byId("vote-code").hidden = true;
     resultList.hidden = !closed;
-    if (open) renderChoices(event);
+    byId("projector-choices").hidden = !open;
+    if (open) {
+      renderChoices(event);
+      byId("projector-list").replaceChildren(...event.candidates.map((candidate) =>
+        element("li", candidate.title + " · " + candidate.builder)));
+    }
     if (closed) renderResults(event);
     rendered = key;
   } catch {
-    status.textContent = "Couldn’t load the ballot. This page will retry automatically.";
+    status.textContent = "Couldn’t load the ballot. If you’re in the room, ask the help desk for a paper slip.";
     projectorStatus.textContent = status.textContent;
     form.hidden = true;
     resultList.hidden = true;

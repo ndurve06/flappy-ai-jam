@@ -53,7 +53,8 @@ def open_ballot(repo, event):
         page = "https://uopaisociety.github.io/flappy-ai-jam/vote.html"
         body = (
             f"Pick a build on the [ballot page]({page}), then paste the generated "
-            "vote as a comment here. Only your latest valid vote counts.\n\n"
+            "vote into the comment box here and press Comment. "
+            "Only your latest valid online vote counts. If you voted on paper, use that vote only.\n\n"
             "Use your GitHub account. Keep student numbers and other personal details out of this public thread.\n\n"
             f"{BALLOT_MARKER}"
         )
@@ -69,8 +70,30 @@ def timestamp(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def tally(event, comments, closes_at):
+def parse_paper_votes(event, ballots):
+    counts = {}
+    if not ballots.strip():
+        return counts
+    candidates = event["candidates"]
+    for item in ballots.split(","):
+        match = re.fullmatch(r"([0-9]+)\s*=\s*([0-9]+)", item.strip())
+        if not match:
+            raise ValueError("Enter paper votes as ballot_number=count, for example 1=4, 2=3.")
+        number, count = map(int, match.groups())
+        if not 1 <= number <= len(candidates):
+            raise ValueError("Unknown ballot number: " + str(number))
+        identifier = candidates[number - 1]["id"]
+        if identifier in counts:
+            raise ValueError("Repeated ballot number: " + str(number))
+        if count > 2**53 - 1:
+            raise ValueError("Paper vote tally is too large.")
+        counts[identifier] = count
+    return counts
+
+
+def tally(event, comments, closes_at, paper_counts=None):
     counts = dict.fromkeys((row["id"] for row in event["candidates"]), 0)
+    counts.update(paper_counts or {})
     first, last = timestamp(event["opensAt"]), timestamp(closes_at)
     latest = {}
     for comment in comments:
@@ -94,32 +117,41 @@ def tally(event, comments, closes_at):
     return counts, winners
 
 
-def close_ballot(repo, event):
+def close_ballot(repo, event, paper_votes="", technical="", creative=""):
     if event["state"] == "closed":
         return event
     if event["state"] != "open":
         raise ValueError("Open the audience ballot before closing it.")
+    paper_counts = parse_paper_votes(event, paper_votes)
+    jury = resolve_winners(event, technical, creative) if technical.strip() or creative.strip() else {}
     endpoint = f"{repo}/issues/{event['issue']}"
     issue = gh_json(endpoint)
     if not issue["locked"]:
         mutate(endpoint + "/lock", "PUT", ("lock_reason=resolved",))
     if issue["state"] == "open":
         issue = mutate(endpoint, "PATCH", ("state=closed",))
-    counts, winners = tally(event, api_pages(endpoint + "/comments?per_page=100"), issue["closed_at"])
+    counts, winners = tally(event, api_pages(endpoint + "/comments?per_page=100"), issue["closed_at"], paper_counts)
     return {
         **event, "state": "closed", "closesAt": issue["closed_at"],
-        "counts": counts, "awards": {"audience": winners},
+        "counts": counts, "awards": {"audience": winners, **jury},
     }
+
+
+def resolve_winners(event, technical, creative):
+    entries = {row["id"] for row in event["candidates"]}
+    numbered = {f"#{index}": row["id"] for index, row in enumerate(event["candidates"], start=1)}
+    technical, creative = technical.strip().lower(), creative.strip().lower()
+    technical, creative = numbered.get(technical, technical), numbered.get(creative, creative)
+    if technical not in entries or creative not in entries:
+        raise ValueError("Enter a build ID or a ballot number prefixed with # for both awards.")
+    return {"technical": [technical], "creative": [creative]}
 
 
 def set_winners(event, technical, creative):
     if event["state"] != "closed":
         raise ValueError("Close the audience ballot before publishing the committee awards.")
-    entries = {row["id"] for row in event["candidates"]}
-    technical, creative = technical.strip().lower(), creative.strip().lower()
-    if technical not in entries or creative not in entries:
-        raise ValueError("Enter the gallery build ID for both award winners. See the ballot candidates below.")
-    return {**event, "awards": {**event["awards"], "technical": [technical], "creative": [creative]}}
+    jury = resolve_winners(event, technical, creative)
+    return {**event, "awards": {**event["awards"], **jury}}
 
 
 def main():
@@ -134,19 +166,22 @@ def main():
         raise ValueError("Event operations require repository write access.")
 
     event = json.loads(EVENT.read_text())
-    task = dispatch["inputs"]["operation"]
+    inputs = dispatch["inputs"]
+    task = inputs["operation"]
     if task == "open-voting":
         event = open_ballot(repo, event)
     elif task == "close-voting":
-        event = close_ballot(repo, event)
+        event = close_ballot(
+            repo, event, inputs.get("paper_votes", ""),
+            inputs.get("technical_id", ""), inputs.get("creative_id", ""),
+        )
     elif task == "publish-winners":
-        inputs = dispatch["inputs"]
         event = set_winners(event, inputs["technical_id"], inputs["creative_id"])
     else:
         raise ValueError("Unknown event operation.")
     EVENT.write_text(json.dumps(event, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    for candidate in event.get("candidates", []):
-        print("Candidate ID:", candidate["id"])
+    for number, candidate in enumerate(event.get("candidates", []), start=1):
+        print(f"Ballot #{number} · {candidate['title']} · {candidate['builder']} [ID: {candidate['id']}]")
 
 
 if __name__ == "__main__":
