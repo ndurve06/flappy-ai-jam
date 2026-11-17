@@ -62,7 +62,7 @@ These comments in the file mark the parts Gemini should keep. They appear in thi
 
 - `CONFIG` — speeds, sizes, and colours. Change these numbers first.
 - `PHYSICS & INPUT` — gravity, tap and keyboard input, pause and restart.
-- `PIPES / LEVEL` — wide gaps, gradual height changes and collision checks.
+- `PIPES / LEVEL` — gaps that narrow gradually, smooth height changes and collision checks.
 - `SCORE & GAME OVER` — three lives, short recovery after a bump and the end screen.
 - `GRAPHICS` — sky, pipes, ground and bird, drawn with shapes.
 - `GAME LOOP` — fixed simulation steps, independent of screen refresh rate.
@@ -187,7 +187,7 @@ Open the [live gallery](https://uopaisociety.github.io/flappy-ai-jam/showcase.ht
 | [Voice flight](examples/02-voice-frequency-thruster.html) | Choose **Play** and use **Space** or tap. Open in a new tab and select **Enable mic** to try short words. |
 | [Boss rush](examples/03-overclock-boss-protocol.html) | Choose **Play** to meet the first boss. Press **Shift** or select **Dash** for a short shield. |
 
-The reference games run in continuous practice. A collision moves the player back into a safe gap and the demo keeps going. The starter has three lives with recovery time between hits. All four games pause when their window loses focus.
+All four games have three lives with brief recovery after a hit. After an eight-second warm-up, speed increases, new gaps narrow and height changes grow over the next minute. Existing gaps keep their shape as you approach. Reference demo rounds finish after 90 seconds to keep projected turns moving. The starter continues until its three lives are lost. All four games pause when their window loses focus.
 
 ### Committee run of show
 

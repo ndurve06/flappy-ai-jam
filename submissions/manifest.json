@@ -8,7 +8,7 @@
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "technical-execution",
-      "description": "The gentle three-life starter. Flap through the gaps with Space, the up arrow or tap.",
+      "description": "The three-life starter. Find your rhythm as the gaps narrow and the game speeds up.",
       "prompt": null
     },
     {
@@ -19,7 +19,7 @@
       "github": "uopaisociety",
       "track": "technical-execution",
       "description": "Watch the game plan its own flight path, then switch the autopilot off and try it yourself.",
-      "prompt": "Add an autopilot that plans flap-or-coast decisions using the game’s fixed-step physics. Draw its predicted flight path and let me switch back to manual controls. Keep the demo in continuous practice."
+      "prompt": "Add an autopilot that plans flap-or-coast decisions using the game’s fixed-step physics. Draw its predicted flight path and let me switch back to manual controls. Use three lives and a gradual difficulty ramp. End the demo round after 90 seconds."
     },
     {
       "id": "02-voice-frequency-thruster",
@@ -29,7 +29,7 @@
       "github": "uopaisociety",
       "track": "game-feel",
       "description": "Flap with Space, tap, or your voice. The mic is optional and sound stays on your device.",
-      "prompt": "Use the browser microphone locally to flap when I speak. Show a spectrum behind the game, and keep Space and tap working if the mic is unavailable. Use wide gaps and recovery so visitors can keep playing."
+      "prompt": "Use the browser microphone locally to flap when I speak. Show a spectrum behind the game, and keep Space and tap working if the mic is unavailable. Use three lives, short recovery after hits and a gradual difficulty ramp. Limit each demo round to 90 seconds."
     },
     {
       "id": "03-overclock-boss-protocol",
@@ -38,8 +38,8 @@
       "builder": "University of Portsmouth AI Society",
       "github": "uopaisociety",
       "track": "creative-mutation",
-      "description": "Meet the boss straight away. Dash through a wave, then fly through the gates. Bumps let you keep going.",
-      "prompt": "Add a Shift or on-screen dash that gives a short shield. Show a slow, clearly signalled boss wave at the start, then alternate gates and boss waves. Let the player recover after bumps for live demos."
+      "description": "Meet the boss straight away. Dash through waves that get tougher as you go. Three lives per round.",
+      "prompt": "Add a Shift or on-screen dash that gives a short shield. Show a slow, clearly signalled boss wave at the start, then alternate gates and boss waves. Use three lives with brief recovery between hits, make each wave tougher, and end the demo round after 90 seconds."
     }
   ]
 }
