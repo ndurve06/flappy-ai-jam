@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#06283F">
+  <meta name="description" content="Vote for your favourite University of Portsmouth AI Society Flappy AI Jam build.">
+  <title>Audience Vote · Flappy AI Jam</title>
+  <link rel="icon" href="event/brand/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@700;800&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="event/brand/shell.css">
+  <link rel="stylesheet" href="event/site.css">
+  <script type="module" src="event/vote.js"></script>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+  <header class="society-header">
+    <a href="https://github.com/uopaisociety" aria-label="University of Portsmouth AI Society on GitHub"><img class="society-logo" src="event/brand/lockup.svg" alt="University of Portsmouth AI Society" width="1200" height="360"></a>
+    <nav class="society-nav" aria-label="Event navigation">
+      <a href="showcase.html#hall-of-fame">Hall of Fame</a>
+    </nav>
+  </header>
+  <main class="wrap vote-page" id="ballot">
+    <p class="meta">Flappy AI Jam</p>
+    <h1 class="page-title">Audience vote</h1>
+    <p class="intro">Play the builds and pick the one you’d most like to play again.</p>
+    <div class="vote-grid">
+      <section class="panel" aria-label="Ballot">
+        <p class="vote-status" id="status" role="status">Loading the ballot…</p>
+        <form id="vote-form" hidden>
+          <fieldset>
+            <legend>Choose one build</legend>
+            <div class="choices" id="choices"></div>
+          </fieldset>
+          <p class="section-intro">Your GitHub account is your voter ID. Your ballot is a public GitHub comment. Only your latest valid vote counts.</p>
+          <button id="prepare" class="primary" type="submit">Copy vote and continue</button>
+          <div class="vote-code" id="vote-code" hidden>
+            <label for="comment">Paste this line into the GitHub comment box and post it.</label>
+            <input id="comment" type="text" readonly>
+            <p id="copy-note" role="status"></p>
+            <div class="actions"><a class="action primary" id="cast" target="_blank" rel="noopener noreferrer">Continue to GitHub ↗︎</a></div>
+          </div>
+        </form>
+        <ul id="results" hidden></ul>
+        <noscript><p>Enable JavaScript to load the ballot.</p></noscript>
+      </section>
+      <aside class="panel scan-card" aria-labelledby="scan-title">
+        <h2 id="scan-title">Share the ballot</h2>
+        <canvas class="qr" id="share-qr" role="img" aria-label="QR code for the audience vote" hidden></canvas>
+        <a href="vote.html?projector">Open projector view ↗︎</a>
+      </aside>
+    </div>
+  </main>
+  <main class="wrap vote-page" id="projector" hidden>
+    <div class="projector-wrap">
+      <div>
+        <p class="meta">Flappy AI Jam</p>
+        <h1 class="page-title">Scan to vote</h1>
+        <p class="intro" id="projector-status" role="status">Loading the ballot…</p>
+        <div class="actions">
+          <a class="action" href="vote.html">Open ballot</a>
+          <button type="button" id="fullscreen" hidden>Fullscreen</button>
+        </div>
+      </div>
+      <canvas class="qr" id="projector-qr" role="img" aria-label="QR code for the audience vote" hidden></canvas>
+    </div>
+  </main>
+</body>
+</html>
