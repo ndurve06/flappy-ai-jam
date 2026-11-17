@@ -1,9 +1,9 @@
 import { loadEvent, loadManifest, awardsFor, publicGameUrl } from "./state.js";
 const curated = new Map([
-  ["baseline", { path: "index.html", controls: "Use Space, the up arrow or tap to thrust." }],
-  ["01-neural-autopilot", { path: "examples/01-neural-autopilot.html", controls: "Press A or select Autopilot to start the trajectory solver." }],
-  ["02-voice-frequency-thruster", { path: "examples/02-voice-frequency-thruster.html", controls: "The preview supports Space and tap. Open the game in a new tab for microphone controls." }],
-  ["03-overclock-boss-protocol", { path: "examples/03-overclock-boss-protocol.html", controls: "Press Shift to dash. Choose Boss practice to jump straight to the encounter." }],
+  ["baseline", { path: "index.html", controls: "Press Space, the up arrow or tap to flap. You have three lives. Press P to pause." }],
+  ["01-neural-autopilot", { path: "examples/01-neural-autopilot.html", controls: "Choose Play to watch the autopilot. Press A or choose Autopilot to fly manually." }],
+  ["02-voice-frequency-thruster", { path: "examples/02-voice-frequency-thruster.html", controls: "Space and tap work immediately. Open the game in a new tab to enable the microphone." }],
+  ["03-overclock-boss-protocol", { path: "examples/03-overclock-boss-protocol.html", controls: "The boss appears as soon as you play. Press Shift or choose Dash for a short shield. Bumps let you keep playing." }],
 ]);
 const handlePattern = /^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/i;
 const byId = (id) => document.getElementById(id);

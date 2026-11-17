@@ -61,10 +61,11 @@ Leave `index.html` in the top folder. GitHub Pages serves that folder from the `
 These comments in the file mark the parts Gemini should keep. They appear in this order:
 
 - `CONFIG` — speeds, sizes, and colours. Change these numbers first.
-- `PHYSICS` — gravity, the flap, and the short pause so a restart is not an accident.
-- `PIPES / LEVEL` — where the gaps appear, and what counts as a hit.
-- `GRAPHICS` — sky, pipes, ground, and the bird, drawn with shapes.
-- `SCORE & GAME OVER` — the score, your best score, and the end screen.
+- `PHYSICS & INPUT` — gravity, tap and keyboard input, pause and restart.
+- `PIPES / LEVEL` — wide gaps, gradual height changes and collision checks.
+- `SCORE & GAME OVER` — three lives, short recovery after a bump and the end screen.
+- `GRAPHICS` — sky, pipes, ground and bird, drawn with shapes.
+- `GAME LOOP` — fixed simulation steps, independent of screen refresh rate.
 
 ## Quickstart
 
@@ -182,9 +183,11 @@ Open the [live gallery](https://uopaisociety.github.io/flappy-ai-jam/showcase.ht
 
 | Reference mod | Quick preview |
 | --- | --- |
-| [Autonomous Trajectory Solver](examples/01-neural-autopilot.html) | Press **A** or tap **Autopilot** to launch and draw the flight plan. |
-| [Acoustic Pitch Controller](examples/02-voice-frequency-thruster.html) | Open standalone on HTTPS or localhost, choose **Enable mic**, launch, and try voice pulses or whistles. **Space** and tap also work. |
-| [Overclock Boss Protocol](examples/03-overclock-boss-protocol.html) | Choose **Boss practice** for an immediate encounter. Press **Shift** or tap **Dash**. Normal flights encounter the boss every 10 points. |
+| [Autopilot](examples/01-neural-autopilot.html) | Choose **Play**. The autopilot starts on. Press **A** or select **Autopilot** to fly manually. |
+| [Voice flight](examples/02-voice-frequency-thruster.html) | Choose **Play** and use **Space** or tap. Open in a new tab and select **Enable mic** to try short words. |
+| [Boss rush](examples/03-overclock-boss-protocol.html) | Choose **Play** to meet the first boss. Press **Shift** or select **Dash** for a short shield. |
+
+The reference games run in continuous practice. A collision moves the player back into a safe gap and the demo keeps going. The starter has three lives with recovery time between hits. All four games pause when their window loses focus.
 
 ### Committee run of show
 
