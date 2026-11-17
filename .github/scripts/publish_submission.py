@@ -69,7 +69,8 @@ def parse_submission(issue):
     github = issue["user"]["login"]
     if issue["user"]["type"] != "User" or not HANDLE.fullmatch(github):
         raise ValueError("Submissions must come from a GitHub user account.")
-    identifier = github.lower()
+    assisted = any(label["name"] == "committee-assisted" for label in issue["labels"])
+    identifier = f"entry--{issue['number']}" if assisted else github.lower()
     title, builder, linkedin, track, prompt, game_url = extract_fields(issue["body"] or "")
     if not (0 < len(title) <= 100 and 0 < len(builder) <= 100 and 0 < len(prompt) <= 1500
             and all(value != "_No response_" for value in (title, builder, prompt))
@@ -80,6 +81,8 @@ def parse_submission(issue):
         "github": github, "track": TRACKS[track], "prompt": prompt, "issue": issue["number"],
         "url": public_url(game_url),
     }
+    if assisted:
+        row["assisted"] = True
     if linkedin not in {"", "_No response_"}:
         linkedin_url = public_url(linkedin)
         if urlsplit(linkedin_url).hostname not in {"linkedin.com", "www.linkedin.com"}:
@@ -123,10 +126,14 @@ def main():
     if permissions.get("permission") not in {"write", "admin"}:
         raise ValueError("Applying approval requires write access to the repository.")
     current = gh_json(f"repos/{repository}/issues/{int(issue['number'])}")
-    if (current["state"] != "open" or not REQUIRED_LABELS.issubset(label["name"] for label in current["labels"])
-            or not REQUIRED_LABELS.issubset(label["name"] for label in issue["labels"])
-            or issue["body"] != current["body"]):
+    approval_labels = REQUIRED_LABELS | {"committee-assisted"}
+    approved_labels = {label["name"] for label in issue["labels"]} & approval_labels
+    current_labels = {label["name"] for label in current["labels"]} & approval_labels
+    if (current["state"] != "open" or not REQUIRED_LABELS.issubset(approved_labels)
+            or current_labels != approved_labels or issue["body"] != current["body"]):
         raise ValueError("The submission changed, closed or lost approval. Review it and apply approved again.")
+    if json.loads(Path("submissions/event.json").read_text())["state"] != "pending":
+        raise ValueError("The submission list is locked for the audience ballot.")
     row = parse_submission(issue)
     record_submission(row)
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:

@@ -12,7 +12,7 @@ Thursday 19 November 2026 · 18:30–20:00
 [![Stack](https://img.shields.io/badge/stack-HTML5_Canvas_%7C_Vanilla_JS-073B5C?style=flat-square)](https://github.com/uopaisociety/flappy-ai-jam/blob/main/index.html)
 [![Sprint](https://img.shields.io/badge/sprint-30_minutes-E6B325?style=flat-square&labelColor=073B5C)](https://github.com/uopaisociety/flappy-ai-jam)
 
-[Play the starter](https://uopaisociety.github.io/flappy-ai-jam/) · [Play the Hall of Fame builds](https://uopaisociety.github.io/flappy-ai-jam/showcase.html)
+[Play the starter](https://uopaisociety.github.io/flappy-ai-jam/) · [Event hub and Hall of Fame](https://uopaisociety.github.io/flappy-ai-jam/showcase.html)
 
 [![Submit Your Build](https://img.shields.io/badge/Submit_Your_Build-Open_GitHub_Form-073B5C?style=flat-square)](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml)
 
@@ -48,14 +48,18 @@ Create a free account at [github.com/signup](https://github.com/signup) before t
 
 You can still play and compete with no GitHub account. Build the game in Gemini Canvas, use Canvas's **Share** button to get a public link, and submit that link. A Gemini Canvas share link is accepted for judging.
 
-The room submission form accepts a Gemini Canvas share link. Use GitHub if you also want a playable listing in the public gallery.
+Take your Gemini Canvas share link and build details to the committee desk. The committee can submit it for you with your name or team name.
 
 ## Repository architecture
 
 ```text
 flappy-ai-jam/
-├── index.html    the whole game
-└── README.md     this guide
+├── index.html      standalone starter game
+├── showcase.html   attendee guide, reference mods, gallery and awards
+├── arcade.html     projector timer, demo queue and local judging
+├── vote.html       audience ballot and projector QR
+├── event/          shared branding and event page assets
+└── submissions/    approved entries and published ballot state
 ```
 
 Leave `index.html` in the top folder. GitHub Pages serves that folder from the `main` branch. If you move the file, your link stops working.
@@ -170,7 +174,7 @@ Fix only that bug, keep every feature, and return the FULL working index.html.
 
 ## Submission and judging
 
-Open [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) while signed in to GitHub. Enter your build title, builder name, track and key prompt, then paste the public link to your game. A GitHub Pages URL, Gemini Canvas share link or another public HTTPS game link works. LinkedIn is optional. A maintainer reviews the issue and applies `approved`. Once Pages finishes deploying, the bot replies with your playable gallery link. You can also use the submission form displayed at the jam if you are entering without GitHub.
+Open [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) while signed in to GitHub. Enter your build title, builder name, track and key prompt, then paste the public link to your game. A GitHub Pages URL, Gemini Canvas share link or another public HTTPS game link works. LinkedIn is optional. A maintainer reviews the issue and applies `approved`. Once Pages finishes deploying, the bot replies with your playable gallery link. If you are entering without GitHub, bring your public game link and the same details to the committee desk.
 
 Your issue, game link and key prompt will be public. Keep your game and any assets on the host you chose. If the gallery preview is blocked, select **Open game in new tab**. For an updated build, submit a new issue. The newest approved issue per GitHub account owns that account’s gallery link.
 
@@ -178,7 +182,7 @@ Your issue, game link and key prompt will be public. Keep your game and any asse
 | --- | --- | --- |
 | Best Engineered | Technical execution | The game runs, the new ideas work, and the build is the strongest in the room. |
 | Most Unhinged Prompt | Creative prompting | The idea is bold and the prompts are specific. No coding is required, so this category is open to everyone. |
-| People's Choice | The room vote | Everyone in the room votes. The game people most want to play again wins. |
+| People's Choice | The room vote | The audience votes with GitHub accounts. The game people most want to play again wins. |
 
 ## Hall of Fame
 
@@ -190,13 +194,18 @@ Open the [live gallery](https://uopaisociety.github.io/flappy-ai-jam/showcase.ht
 | [Acoustic Pitch Controller](examples/02-voice-frequency-thruster.html) | Open standalone on HTTPS or localhost, choose **Enable mic**, launch, and try voice pulses or whistles. **Space** and tap also work. |
 | [Overclock Boss Protocol](examples/03-overclock-boss-protocol.html) | Choose **Boss practice** for an immediate encounter. Press **Shift** or tap **Dash**. Normal flights encounter the boss every 10 points. |
 
-### Maintainer setup
+### Committee run of show
 
-1. In **Settings → Pages → Source**, choose **GitHub Actions**, then run **Publish Jam Showcase** from the Actions tab on `main`. The workflow creates the `submission` and `approved` labels and deploys the seed gallery.
-2. Open each submission link, check that the game is public and playable, then apply `approved`. The workflow accepts approvals from accounts with repository write access. If a student edits an issue before publication, review it and reapply the label. If the job fails, fix the cause and rerun it or reapply approval.
-3. After judging, set `"winner": true` on the relevant entries in `submissions/manifest.json` and merge the changes. Those entries appear in **Event Winners**.
+1. Before the event, check **Settings → Pages → Source** uses **GitHub Actions** or **main / (root)**, then run [Publish Jam Showcase](https://github.com/uopaisociety/flappy-ai-jam/actions/workflows/publish-submission.yml) on `main` with `deploy`. The workflow sets up the labels and publishes the site. The workflow updates `main` with its built-in token when approvals, the ballot, or awards change.
+2. Share the **event hub** with participants. Open the [projector timer](https://uopaisociety.github.io/flappy-ai-jam/arcade.html), use **Fullscreen** and press **Play** at the start of the sprint. The screen rotates prompt tips and announces the time at 15, 5 and 1 minute and at code freeze. The timer’s QR opens the submission instructions. **Settings** accepts a different public form URL if the room has one.
+3. Open each entry in a signed-out or private browser, check it is playable, and apply `approved` after reviewing the submission. For someone without GitHub, a committee member can file the same build form on their behalf. Apply `committee-assisted` before `approved` so multiple assisted entries can share the same filing account. If someone edits an issue before approval publishes, review it again and reapply `approved`.
+4. In **Demo queue**, choose **Queue approved builds** to load the gallery entries. Play the games, use the local scores if helpful, and agree on the two committee picks. The local scores stay in the projector browser and can be exported.
+5. After the final approval has deployed and the demos are done, run `open-voting`. It freezes the approved entry list and creates a public ballot issue. Wait for the workflow to finish, then put the [voting QR](https://uopaisociety.github.io/flappy-ai-jam/vote.html?projector) on screen. Attendees choose a build, copy their ballot and post it as a GitHub issue comment. One latest valid ballot counts per GitHub account. The GitHub account is the voter ID, and comments are public.
+6. Run `close-voting` to lock the poll, tally People’s Choice, and publish the totals. A tie shares the award. Then run `publish-winners` with the two build IDs from the workflow log or from each game’s `?build=` gallery link. Only committee accounts with repository write access can run these operations. Display the [official awards](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#winners) once the final workflow run deploys.
 
-The workflow writes each approved game link and its details to the manifest. The gallery previews hosted games in a sandbox and offers a separate tab for hosts that block embeds.
+### Shared event page styles
+
+Future event pages can import `event/brand/shell.css` for the join-page header and background. It includes `event/brand/tokens.css`. Use the `.society-header` and `.ambient` markup from `showcase.html` and link `event/brand/icon.svg` for the theme-aware favicon. Add `data-animate` to the body when the page benefits from the 32-second drift. The CSS respects reduced motion. `event/site.css` supplies the event hub and ballot layouts. The starter requires only its own HTML.
 
 ## About the society
 

@@ -6,6 +6,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Event operation
+        type: choice
+        default: deploy
+        options: [deploy, open-voting, close-voting, publish-winners]
+      technical_id:
+        description: Best Engineered build ID (required for publish-winners)
+        type: string
+      creative_id:
+        description: Most Unhinged Prompt build ID (required for publish-winners)
+        type: string
 
 permissions: {}
 
@@ -24,6 +36,9 @@ jobs:
     outputs:
       issue: ${{ steps.submission.outputs.issue }}
       build: ${{ steps.submission.outputs.build }}
+      publishing_source: ${{ steps.pages_source.outputs.type }}
+      page_url: ${{ steps.pages_source.outputs.url }}
+      revision: ${{ steps.revision.outputs.sha }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -41,40 +56,61 @@ jobs:
           if ! grep -Fxq approved <<< "$labels"; then
             gh label create approved --color A7BFB4 --description 'Reviewed for publication in the Flappy AI Jam gallery'
           fi
-      - name: Require GitHub Actions as the Pages source
+          if ! grep -Fxq audience-ballot <<< "$labels"; then
+            gh label create audience-ballot --color 668998 --description 'Official Flappy AI Jam audience ballot'
+          fi
+          if ! grep -Fxq committee-assisted <<< "$labels"; then
+            gh label create committee-assisted --color F7F5F0 --description 'Submitted on behalf of an attendee'
+          fi
+      - name: Detect the Pages publishing source
+        id: pages_source
         run: |
           set -euo pipefail
-          build_type=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type)
-          if [[ "$build_type" != workflow ]]; then
-            echo '::error::Select GitHub Actions in Settings → Pages before publishing submissions.'
+          pages=$(gh api "repos/$GITHUB_REPOSITORY/pages")
+          type=$(jq -r .build_type <<< "$pages")
+          if [[ "$type" != workflow ]] &&
+             ! jq -e '.source.branch == "main" and .source.path == "/"' <<< "$pages" >/dev/null; then
+            echo '::error::Pages must publish from GitHub Actions or from main / (root).'
             exit 1
           fi
-      - name: Publish approved issue snapshot
-        if: github.event_name == 'issues'
+          printf 'type=%s\nurl=%s\n' "$type" "$(jq -r .html_url <<< "$pages")" >> "$GITHUB_OUTPUT"
+      - name: Publish approved submission or update the event
+        if: github.event_name == 'issues' || (github.event_name == 'workflow_dispatch' && inputs.operation != 'deploy')
         id: submission
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           for attempt in 1 2 3; do
-            python3 .github/scripts/publish_submission.py
-            git add -- submissions/manifest.json
+            if [[ "$EVENT_NAME" == issues ]]; then
+              python3 .github/scripts/publish_submission.py
+            else
+              python3 .github/scripts/manage_event.py
+            fi
+            git add -- submissions/manifest.json submissions/event.json
             if git diff --cached --quiet; then exit 0; fi
-            git commit -m 'chore: publish approved jam submission'
+            git commit -m 'chore: update Flappy AI Jam event'
             if git push origin HEAD:main; then exit 0; fi
             if [[ "$attempt" == 3 ]]; then exit 1; fi
             git fetch origin main
             git reset --hard FETCH_HEAD
           done
-      - name: Stage the gallery and curated games
+      - name: Record the revision to publish
+        id: revision
+        run: printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Stage event pages and playable builds
+        if: steps.pages_source.outputs.type == 'workflow'
         run: |
           set -euo pipefail
           site="$RUNNER_TEMP/jam-pages"
           mkdir -p "$site/submissions"
-          cp index.html arcade.html showcase.html "$site/"
-          cp -r examples "$site/"
-          cp submissions/manifest.json "$site/submissions/"
+          cp index.html arcade.html showcase.html vote.html "$site/"
+          cp -r event examples "$site/"
+          cp submissions/manifest.json submissions/event.json "$site/submissions/"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        if: steps.pages_source.outputs.type == 'workflow'
         with:
           path: ${{ runner.temp }}/jam-pages
 
@@ -86,12 +122,36 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.pages.outputs.page_url }}
-    outputs:
-      page_url: ${{ steps.pages.outputs.page_url }}
+      url: ${{ needs.stage.outputs.page_url }}
     steps:
       - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
-        id: pages
+        if: needs.stage.outputs.publishing_source == 'workflow'
+      - name: Publish to branch-based Pages
+        if: needs.stage.outputs.publishing_source != 'workflow'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ needs.stage.outputs.revision }}
+        run: |
+          set -euo pipefail
+          builds="repos/$GITHUB_REPOSITORY/pages/builds"
+          latest=$(gh api "$builds/latest" || echo '{}')
+          if ! jq -e --arg commit "$REVISION" '.commit == $commit and .status != "errored"' <<< "$latest" >/dev/null; then
+            gh api --method POST "$builds" --jq .status
+          fi
+          for attempt in {1..36}; do
+            if latest=$(gh api "$builds/latest") &&
+               status=$(jq -r --arg commit "$REVISION" 'select(.commit == $commit) | .status' <<< "$latest"); then
+              case "$status" in
+                built) exit 0 ;;
+                errored)
+                  jq -r '.error.message // "Pages build failed."' <<< "$latest" >&2
+                  exit 1 ;;
+              esac
+            fi
+            sleep 5
+          done
+          echo '::error::Timed out waiting for Pages to publish the event update.'
+          exit 1
 
   notify:
     needs: [stage, deploy]
@@ -103,7 +163,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       ISSUE: ${{ needs.stage.outputs.issue }}
       BUILD: ${{ needs.stage.outputs.build }}
-      PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+      PAGE_URL: ${{ needs.stage.outputs.page_url }}
     steps:
       - name: Post the live gallery link
         run: |
