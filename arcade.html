@@ -220,9 +220,9 @@
           <p id="tip"></p>
         </div>
         <div class="submission">
-          <canvas id="qr" role="img" aria-label="QR code for the submission form" hidden></canvas>
+          <canvas id="qr" role="img" aria-label="QR code for the participant guide" hidden></canvas>
           <div>
-            <p class="label">Submit your build</p>
+            <p class="label" id="qr-label">Get ready</p>
             <a id="submit-link" target="_blank" rel="noopener noreferrer" hidden></a>
             <p class="small" id="submit-note">Set the submission URL in Settings.</p>
           </div>
@@ -372,12 +372,14 @@
   let mode = "sprint";
   let entries = saved.entries ?? [];
   let activeId = entries.some((entry) => entry.id === saved.activeId) ? saved.activeId : null;
+  const setupUrl = new URL("showcase.html#setup", location.href).href;
   const defaultSubmission = new URL("showcase.html#submit", location.href).href;
   let submissionUrl = saved.submissionUrl || defaultSubmission;
   let timer = saved.timer ?? { remaining: DURATION, end: null };
   let soundEnabled = saved.soundEnabled ?? true;
   let audio;
   let previousSeconds = Math.ceil(timer.remaining / 1000);
+  let projectedLink;
   let criterion = activeEntry()?.scores.indexOf(null) ?? -1;
   let tip = 0;
   let editId = null;
@@ -458,6 +460,7 @@
     if (byId("clock-note").textContent !== note) byId("clock-note").textContent = note;
     byId("play").disabled = timer.end !== null || !seconds;
     byId("pause").disabled = timer.end === null;
+    renderParticipantQr(seconds <= 300);
   }
 
   byId("play").addEventListener("click", () => {
@@ -499,27 +502,22 @@
     byId("tip").textContent = TIPS[tip];
   }
 
-  function renderSubmission() {
+  function renderParticipantQr(submit) {
+    const url = submit ? submissionUrl : setupUrl;
+    if (projectedLink === url) return;
+    projectedLink = url;
     const link = byId("submit-link");
     const note = byId("submit-note");
     const canvas = byId("qr");
-    link.hidden = !submissionUrl;
-    canvas.hidden = true;
-    note.hidden = false;
-    if (!submissionUrl) {
-      link.removeAttribute("href");
-      note.textContent = "Set the submission URL in Settings.";
-      return;
-    }
-
-    link.href = submissionUrl;
-    link.textContent = submissionUrl === defaultSubmission ? "Submission instructions" : "Open submission form";
-    if (!drawQr(canvas, submissionUrl)) {
-      note.textContent = "This URL is too long for the QR code. Use the form’s short link.";
-      return;
-    }
-    canvas.hidden = false;
-    note.hidden = true;
+    byId("qr-label").textContent = submit ? "Hand in your game" : "Get ready";
+    canvas.setAttribute("aria-label", submit ? "QR code to hand in your game" : "QR code for the participant guide");
+    link.href = url;
+    link.textContent = submit ? (url === defaultSubmission ? "Hand-in instructions" : "Open submission form") : "Start here";
+    link.hidden = false;
+    const ready = drawQr(canvas, url);
+    canvas.hidden = !ready;
+    note.hidden = ready;
+    if (!ready) note.textContent = "QR unavailable. Use a shorter form link or open the link above.";
   }
 
   byId("settings").addEventListener("click", () => {
@@ -537,7 +535,7 @@
     }
     submissionUrl = url || defaultSubmission;
     persist();
-    renderSubmission();
+    refreshClock();
     byId("settings-dialog").close();
   });
   byId("submission-url").addEventListener("input", (event) => event.target.setCustomValidity(""));
@@ -1048,7 +1046,6 @@
     persist();
   }
   renderSound();
-  renderSubmission();
   refreshClock();
   showTip();
   setInterval(refreshClock, 100);

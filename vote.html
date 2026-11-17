@@ -24,32 +24,30 @@
     <p class="meta">Flappy AI Jam</p>
     <h1 class="page-title">Audience vote</h1>
     <p class="intro">Play the builds and pick the one you’d most like to play again.</p>
-    <div class="vote-grid">
-      <section class="panel" aria-label="Ballot">
-        <p class="vote-status" id="status" role="status">Loading the ballot…</p>
-        <form id="vote-form" hidden>
-          <fieldset>
-            <legend>Choose one build</legend>
-            <div class="choices" id="choices"></div>
-          </fieldset>
-          <p class="section-intro">Your GitHub account is your voter ID. Your ballot is a public GitHub comment. Only your latest valid vote counts.</p>
-          <button id="prepare" class="primary" type="submit">Copy vote and continue</button>
+    <section class="panel ballot-panel" aria-label="Ballot">
+      <p class="vote-status" id="status" role="status">Loading the ballot…</p>
+      <form id="vote-form" hidden>
+        <p class="section-intro"><strong>In the room?</strong> Write the number of your favourite on a paper slip and hand it to the help desk. You can also vote online below. Pick one way to vote.</p>
+        <fieldset>
+          <legend>Choose your favourite</legend>
+          <div class="choices" id="choices"></div>
+        </fieldset>
+        <details id="online-vote">
+          <summary>Vote online with GitHub</summary>
+          <p>Choose a game above. Copy the ballot, open GitHub, paste it into the comment box, and press <strong>Comment</strong>. Your vote counts after you post the comment.</p>
+          <p class="section-intro">GitHub comments are public. Use your GitHub account and keep personal details out of the comment.</p>
+          <button id="prepare" class="primary" type="submit">Copy my ballot</button>
           <div class="vote-code" id="vote-code" hidden>
-            <label for="comment">Paste this line into the GitHub comment box and post it.</label>
+            <label for="comment">Your ballot text</label>
             <input id="comment" type="text" readonly>
             <p id="copy-note" role="status"></p>
-            <div class="actions"><a class="action primary" id="cast" target="_blank" rel="noopener noreferrer">Continue to GitHub ↗︎</a></div>
+            <div class="actions"><a class="action primary" id="cast" target="_blank" rel="noopener noreferrer">Open GitHub to post your vote ↗︎</a></div>
           </div>
-        </form>
-        <ul id="results" hidden></ul>
-        <noscript><p>Enable JavaScript to load the ballot.</p></noscript>
-      </section>
-      <aside class="panel scan-card" aria-labelledby="scan-title">
-        <h2 id="scan-title">Share the ballot</h2>
-        <canvas class="qr" id="share-qr" role="img" aria-label="QR code for the audience vote" hidden></canvas>
-        <a href="vote.html?projector">Open projector view ↗︎</a>
-      </aside>
-    </div>
+        </details>
+      </form>
+      <ol id="results" hidden></ol>
+      <noscript><p>Ask for a paper slip at the help desk to vote in the room.</p></noscript>
+    </section>
   </main>
   <main class="wrap vote-page" id="projector" hidden>
     <div class="projector-wrap">
@@ -57,6 +55,10 @@
         <p class="meta">Flappy AI Jam</p>
         <h1 class="page-title">Scan to vote</h1>
         <p class="intro" id="projector-status" role="status">Loading the ballot…</p>
+        <details class="projector-choices" id="projector-choices" hidden>
+          <summary>Show game numbers</summary>
+          <ol id="projector-list"></ol>
+        </details>
         <div class="actions">
           <a class="action" href="vote.html">Open ballot</a>
           <button type="button" id="fullscreen" hidden>Fullscreen</button>

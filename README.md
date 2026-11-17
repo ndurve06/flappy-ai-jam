@@ -26,13 +26,11 @@ The whole game is [`index.html`](index.html), in the top folder of this repo. Th
 
 Nothing to install, and no local server. Gemini Canvas can run the file, and so can a double-click.
 
-**Before Thursday:** UK students can claim [Google AI Plus free for 12 months](https://gemini.google/gb/students/). You need a payment card and a SheerID student check, and that check can take a few days, so claim it before the event. If it is not ready in time, free Gemini still works.
+**Taking part?** Start with the [participant guide](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#setup). Free Gemini Canvas is enough. If you’re using a phone or can’t sign in, ask at the help desk to join someone with a laptop.
 
-## Never used GitHub? Do this
+## Publish your own copy on GitHub (optional)
 
-This is the way to enter if you have never used git. Everything happens in the browser. No terminal.
-
-Use the [GitHub submission form](#submission-and-judging) to enter the gallery with a public game link. The optional Star and Fork route below gives you a public project and a game link of your own.
+If you want a public game link of your own, you can publish a copy from a web browser.
 
 1. **Sign up or sign in.** Open [github.com/signup](https://github.com/signup) or [github.com/login](https://github.com/login). The buttons say **Sign up** and **Sign in**.
 2. **Star.** On this page, click **Star** at the top right.
@@ -44,11 +42,7 @@ Use the [GitHub submission form](#submission-and-judging) to enter the gallery w
 
 ## No GitHub account?
 
-Create a free account at [github.com/signup](https://github.com/signup) before the event. It takes about two minutes. The 18:30 help desk can help.
-
-You can still play and compete with no GitHub account. Build the game in Gemini Canvas, use Canvas's **Share** button to get a public link, and submit that link. A Gemini Canvas share link is accepted for judging.
-
-Take your Gemini Canvas share link and build details to the committee desk. The committee can submit it for you with your name or team name.
+Bring your game link, game name, team name and the request you sent to AI to the help desk. The committee can submit it for you. If sharing fails, bring your working preview or game file for a live demo. Ask for a paper slip to vote in the room.
 
 ## Repository architecture
 
@@ -76,18 +70,16 @@ These comments in the file mark the parts Gemini should keep. They appear in thi
 
 ### Star and Fork
 
-Do this on the society page before you edit anything. The clicks are in [Never used GitHub? Do this](#never-used-github-do-this).
+If you want a GitHub-hosted copy, follow [Publish your own copy on GitHub](#publish-your-own-copy-on-github-optional).
 
 ### Choose where you build
 
 **Gemini Canvas (recommended).** Nothing to install.
 
-1. Open [`index.html`](index.html) and click **Copy raw file** (the copy icon above the code).
-2. Go to [gemini.google.com](https://gemini.google.com) and choose **Canvas**. It may be under **Tools**.
-3. Paste the whole file, and add a line such as "Here is my game. Show me a preview."
-4. Open **Preview** and play. Keep asking for changes in the chat.
-
-Free Gemini is enough for the evening. The [Google AI Plus student offer](https://gemini.google/gb/students/) is worth claiming beforehand if you can.
+1. Open the [participant guide](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#setup) and select **Copy starter prompt**.
+2. Open [Gemini](https://gemini.google.com), sign in and choose **Canvas** under **Tools**.
+3. Paste into the chat and send it. Open **Preview** and play a round.
+4. Ask for one change in the same chat and play again.
 
 **On your own computer (optional).** Gemini Canvas is still the route for the evening. This path is only if you already work on your own machine.
 
@@ -174,15 +166,15 @@ Fix only that bug, keep every feature, and return the FULL working index.html.
 
 ## Submission and judging
 
-Open [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) while signed in to GitHub. Enter your build title, builder name, track and key prompt, then paste the public link to your game. A GitHub Pages URL, Gemini Canvas share link or another public HTTPS game link works. LinkedIn is optional. A maintainer reviews the issue and applies `approved`. Once Pages finishes deploying, the bot replies with your playable gallery link. If you are entering without GitHub, bring your public game link and the same details to the committee desk.
+In the room, bring your game link, display name, game name and AI request to the help desk. You can also use [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) while signed in to GitHub. A share link from Gemini Canvas, GitHub Pages or another public HTTPS host works. The game, display name and AI request appear in the public gallery after review. GitHub submissions receive a reply with the gallery link when deployment completes.
 
-Your issue, game link and key prompt will be public. Keep your game and any assets on the host you chose. If the gallery preview is blocked, select **Open game in new tab**. For an updated build, submit a new issue. The newest approved issue per GitHub account owns that account’s gallery link.
+If the preview is blocked, select **Open game in new tab**. For an updated game, tell the help desk or submit a new issue online. The newest approved online submission per GitHub account owns that account’s gallery link.
 
 | Category | What it rewards | How we judge it |
 | --- | --- | --- |
 | Best Engineered | Technical execution | The game runs, the new ideas work, and the build is the strongest in the room. |
 | Most Unhinged Prompt | Creative prompting | The idea is bold and the prompts are specific. No coding is required, so this category is open to everyone. |
-| People's Choice | The room vote | The audience votes with GitHub accounts. The game people most want to play again wins. |
+| People's Choice | The room vote | The audience votes once on paper or with a GitHub account. Combined votes decide the award. |
 
 ## Hall of Fame
 
@@ -196,12 +188,25 @@ Open the [live gallery](https://uopaisociety.github.io/flappy-ai-jam/showcase.ht
 
 ### Committee run of show
 
-1. Before the event, check **Settings → Pages → Source** uses **GitHub Actions** or **main / (root)**, then run [Publish Jam Showcase](https://github.com/uopaisociety/flappy-ai-jam/actions/workflows/publish-submission.yml) on `main` with `deploy`. The workflow sets up the labels and publishes the site. The workflow updates `main` with its built-in token when approvals, the ballot, or awards change.
-2. Share the **event hub** with participants. Open the [projector timer](https://uopaisociety.github.io/flappy-ai-jam/arcade.html), use **Fullscreen** and press **Play** at the start of the sprint. The screen rotates prompt tips and announces the time at 15, 5 and 1 minute and at code freeze. The timer’s QR opens the submission instructions. **Settings** accepts a different public form URL if the room has one.
-3. Open each entry in a signed-out or private browser, check it is playable, and apply `approved` after reviewing the submission. For someone without GitHub, a committee member can file the same build form on their behalf. Apply `committee-assisted` before `approved` so multiple assisted entries can share the same filing account. If someone edits an issue before approval publishes, review it again and reapply `approved`.
-4. In **Demo queue**, choose **Queue approved builds** to load the gallery entries. Play the games, use the local scores if helpful, and agree on the two committee picks. The local scores stay in the projector browser and can be exported.
-5. After the final approval has deployed and the demos are done, run `open-voting`. It freezes the approved entry list and creates a public ballot issue. Wait for the workflow to finish, then put the [voting QR](https://uopaisociety.github.io/flappy-ai-jam/vote.html?projector) on screen. Attendees choose a build, copy their ballot and post it as a GitHub issue comment. One latest valid ballot counts per GitHub account. The GitHub account is the voter ID, and comments are public.
-6. Run `close-voting` to lock the poll, tally People’s Choice, and publish the totals. A tie shares the award. Then run `publish-winners` with the two build IDs from the workflow log or from each game’s `?build=` gallery link. Only committee accounts with repository write access can run these operations. Display the [official awards](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#winners) once the final workflow run deploys.
+**Before doors open.** Have one host manage the projector and demos and a second person cover the help desk and approvals. Open the [participant guide](https://uopaisociety.github.io/flappy-ai-jam/showcase.html) on a signed-out phone. Test the QR from the back row, paste the starter into a fresh Canvas chat, and check a real Canvas share link in a private browser before the session. Keep `index.html` and the example games downloaded, and bring blank paper slips for voting. Check **Settings → Pages → Source** uses **GitHub Actions** or **main / (root)**, then use `deploy` in [Publish Jam Showcase](https://github.com/uopaisociety/flappy-ai-jam/actions/workflows/publish-submission.yml) on `main` to publish and create the labels.
+
+| Time (UK) | What to do |
+| --- | --- |
+| 18:30–18:45 | Show the [projector timer](https://uopaisociety.github.io/flappy-ai-jam/arcade.html). Its first QR leads to setup. Play the original together, show how to send one request, and wait until beginners can flap and restart in Preview. Help people without a working laptop or login pair up. |
+| 18:45–19:15 | Start the 30-minute clock. The timer changes to the hand-in QR at five minutes left. Ask people to keep a playable version and get their share link ready. |
+| 19:15–19:25 | Help desk checks links in a private browser and submits for anyone without GitHub. Log each team, title, AI request and link. On assisted issues apply `committee-assisted` before `approved`. For online issues, check the details and apply `approved`. Keep a local demo queue if publication is slow. |
+| 19:25–19:45 | Select **Demo queue → Queue approved builds**. Open each game and invite a quick walk-through of what changed. Open Gemini Canvas links in an external tab if the preview frame doesn’t work. Play local files or screen-share working previews for teams that need a hand with sharing. |
+| 19:45–19:52 | Once the final approved game is visible, run `open-voting` to freeze the ballot. Show the [projector ballot](https://uopaisociety.github.io/flappy-ai-jam/vote.html?projector) and its game numbers. Offer a paper slip or the QR for online voting. Ask people to choose one route. |
+| 19:52–20:00 | Count slips by ballot number. Run `close-voting` with `paper_votes` such as `1=4, 2=3`. Enter both committee award picks as ballot numbers such as `#2`, or as build IDs, to publish all three awards in the same run. Once it deploys, show the [awards page](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#winners). |
+
+**If something fails**
+
+- **Canvas unavailable or share link private.** Pair the attendee with someone who can open Canvas, or demo from a working preview or exported file. A playable public link is needed for the online gallery and ballot. Ask before publishing a game or name on someone’s behalf.
+- **Issue edited after approval.** Recheck the title, request and link, then remove and reapply `approved`. If the queue is slow, demo from local files or direct links during the wait.
+- **Vote site slow.** Read the ballot numbers from the `open-voting` workflow log and write them on the board. Start with paper while the page catches up. If GitHub is unavailable, record one paper choice per person against a local team and title list, then match those titles to the approved ballot when publishing. If there are no eligible entries, skip the ballot and play the examples.
+- **Results still publishing or committee undecided.** Close the ballot with the paper tally. You can run `publish-winners` afterwards for the two committee picks. A People’s Choice tie shares the award. Local judging scores can be exported from the projector.
+
+The participant pages have no host controls. Repository write access is required to approve submissions and operate the ballot. A paper slip is counted alongside online ballots. Online repeats are reduced to the latest valid vote per GitHub account. Ask the room to use one route, and hand out one slip per attendee.
 
 ### Shared event page styles
 

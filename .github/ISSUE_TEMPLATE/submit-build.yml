@@ -1,53 +1,31 @@
 name: Submit Your Build
-description: Add your Flappy AI Jam game to the playable gallery.
-title: "[Submission] "
+description: Send your game to the Flappy AI Jam gallery.
+title: "[Game] "
 labels: ["submission"]
 body:
   - type: markdown
     attributes:
-      value: Share a public link that opens your game. GitHub Pages, Gemini Canvas, and other public HTTPS hosts are welcome. Issues and approved builds are public.
-  - type: input
-    id: title
-    attributes:
-      label: Build Title
-      placeholder: Flappy Seagull
-    validations:
-      required: true
+      value: Put your game name in the title above. Only share details you want in the public gallery.
   - type: input
     id: builder
     attributes:
-      label: Builder Name
-      placeholder: Your name or team name
-    validations:
-      required: true
-  - type: input
-    id: linkedin
-    attributes:
-      label: LinkedIn URL (optional)
-      placeholder: https://www.linkedin.com/in/your-name/
-  - type: dropdown
-    id: track
-    attributes:
-      label: Track
-      options:
-        - Technical Execution
-        - Game Feel
-        - Creative Mutation
-      default: 0
+      label: Name or team name
+      placeholder: Team Seagull
     validations:
       required: true
   - type: textarea
     id: prompt
     attributes:
-      label: Key Prompt Used
-      description: Paste the exact one or two sentences you used to make your main change.
+      label: What did you ask the AI to change?
+      description: Copy the request you sent, or describe it in one sentence.
+      placeholder: I asked it to make the game look like a museum at night.
     validations:
       required: true
   - type: input
     id: game_url
     attributes:
-      label: Game URL
-      description: Paste the link people use to open your game.
-      placeholder: https://your-name.github.io/flappy-ai-jam/
+      label: Link to play your game
+      description: Use the share link from Canvas or a link to your published game. Try opening it in a private browser window first.
+      placeholder: https://g.co/gemini/share/…
     validations:
       required: true

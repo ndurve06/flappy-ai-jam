@@ -8,7 +8,6 @@
   --sage: #a7bfb4;
 }
 h1, h2, h3, p, figure { margin: 0; }
-#submit .actions:has([hidden]) { display: none; }
 button, input, select { font: inherit; color: inherit; }
 button, a { touch-action: manipulation; }
 button:disabled { opacity: .55; cursor: default; }
@@ -67,7 +66,7 @@ button:disabled { opacity: .55; cursor: default; }
 .hero-game > span { padding: .75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-weight: 600; }
 .jump {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: clamp(2rem, 5vw, 4.25rem);
   border-block: 1px solid var(--line);
   background: var(--deep);
@@ -120,8 +119,10 @@ dialog::backdrop { background: rgb(6 24 36 / .89); }
 #share-url { width: 100%; padding: .55rem; background: var(--deep); border: 1px solid var(--line); }
 .vote-page { padding-block: clamp(2rem, 5vw, 4.5rem); }
 .vote-page .intro { margin-bottom: 1.25rem; }
-.vote-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(14rem, 1fr); gap: 1.25rem; align-items: start; }
-.vote-grid .panel { min-width: 0; }
+.ballot-panel { max-width: 48rem; }
+#online-vote p { margin-top: .65rem; }
+.projector-choices { margin-bottom: 1rem; }
+.projector-choices ol { max-height: 12rem; overflow: auto; overflow-wrap: anywhere; }
 .vote-status { margin-bottom: 1rem; }
 fieldset { border: 0; padding: 0; margin: 0 0 .9rem; min-width: 0; }
 legend { font-weight: 600; margin-bottom: .65rem; }
@@ -133,13 +134,12 @@ legend { font-weight: 600; margin-bottom: .65rem; }
 .choice input { accent-color: var(--cream); }
 .vote-code { margin-top: 1rem; }
 .vote-code input { width: 100%; margin-top: .4rem; background: var(--deep); padding: .6rem; border: 1px solid var(--line); border-radius: .35rem; }
-.scan-card { display: grid; gap: .75rem; }
 .qr { display: block; width: min(100%, 21rem); height: auto; image-rendering: pixelated; border-radius: .35rem; }
 .projector-wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(1.25rem, 5vw, 5rem); align-items: center; min-height: 68svh; }
 .projector-wrap .qr { width: min(44vw, 54svh, 37rem); }
 .projector-wrap .intro { margin-bottom: 1.2rem; }
 @media (max-width: 46rem) {
-  .hero, .vote-grid, .projector-wrap { grid-template-columns: minmax(0, 1fr); }
+  .hero, .projector-wrap { grid-template-columns: minmax(0, 1fr); }
   .hero { gap: 1.65rem; }
   .jump { display: flex; flex-wrap: wrap; }
   .jump a { padding: .55rem .7rem; }
@@ -153,4 +153,17 @@ legend { font-weight: 600; margin-bottom: .65rem; }
 }
 .section-actions { margin-top: 1.15rem; margin-bottom: .55rem; }
 #award-list .action { margin-top: .85rem; }
-.award-link { display: inline-block; margin-top: .7rem; }
+#setup details, #sprint details, #submit details { margin-top: 1rem; }
+#setup details p, #sprint details p, #submit details p { margin-top: .65rem; }
+#starter-status:not(:empty), #change-status:not(:empty) { margin-top: .65rem; }
+#starter-fallback { display: block; margin-top: .7rem; }
+#starter-prompt {
+  display: block; width: 100%; margin-top: .3rem; padding: .6rem;
+  color: var(--cream); background: var(--deep); border: 1px solid var(--line); border-radius: .35rem;
+  font: .88rem/1.45 var(--mono);
+}
+blockquote {
+  margin: .85rem 0 0; padding: .65rem .9rem;
+  border-left: 3px solid var(--gold); background: var(--deep);
+}
+.frame-box.external-preview { aspect-ratio: auto; min-height: 7rem; }

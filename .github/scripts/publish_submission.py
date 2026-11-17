@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 MANIFEST = Path("submissions/manifest.json")
 HANDLE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?", re.I | re.ASCII)
-LABELS = (
+LEGACY_LABELS = (
     "Build Title",
     "Builder Name",
     "LinkedIn URL (optional)",
@@ -18,6 +18,7 @@ LABELS = (
     "Key Prompt Used",
     "Game URL",
 )
+LABELS = ("Name or team name", "What did you ask the AI to change?", "Link to play your game")
 TRACKS = {
     "Technical Execution": "technical-execution",
     "Game Feel": "game-feel",
@@ -45,18 +46,18 @@ def public_url(value):
     return value
 
 
-def extract_fields(body):
+def extract_fields(body, labels):
     remaining = body.replace("\r\n", "\n").lstrip()
     values = []
-    for index, label in enumerate(LABELS):
+    for index, label in enumerate(labels):
         heading = "### " + label + "\n"
         if not remaining.startswith(heading):
             raise ValueError("Use the repository's Submit Your Build issue form.")
         remaining = remaining[len(heading):]
-        if index == len(LABELS) - 1:
+        if index == len(labels) - 1:
             values.append(remaining.strip())
         else:
-            next_heading = "\n### " + LABELS[index + 1] + "\n"
+            next_heading = "\n### " + labels[index + 1] + "\n"
             value, marker, remainder = remaining.partition(next_heading)
             if not marker:
                 raise ValueError("The issue form is missing a field.")
@@ -71,23 +72,33 @@ def parse_submission(issue):
         raise ValueError("Submissions must come from a GitHub user account.")
     assisted = any(label["name"] == "committee-assisted" for label in issue["labels"])
     identifier = f"entry--{issue['number']}" if assisted else github.lower()
-    title, builder, linkedin, track, prompt, game_url = extract_fields(issue["body"] or "")
+    body = issue["body"] or ""
+    legacy = body.lstrip().startswith("### Build Title\n") or body.lstrip().startswith("### Build Title\r\n")
+    extras = {}
+    if legacy:
+        title, builder, linkedin, track, prompt, game_url = extract_fields(body, LEGACY_LABELS)
+        if track not in TRACKS:
+            raise ValueError("The original issue form is missing a valid track.")
+        extras["track"] = TRACKS[track]
+        if linkedin not in {"", "_No response_"}:
+            linkedin_url = public_url(linkedin)
+            if urlsplit(linkedin_url).hostname not in {"linkedin.com", "www.linkedin.com"}:
+                raise ValueError("The optional LinkedIn URL must use linkedin.com.")
+            extras["linkedin"] = linkedin_url
+    else:
+        builder, prompt, game_url = extract_fields(body, LABELS)
+        title = issue["title"].removeprefix("[Game]").strip()
     if not (0 < len(title) <= 100 and 0 < len(builder) <= 100 and 0 < len(prompt) <= 1500
             and all(value != "_No response_" for value in (title, builder, prompt))
-            and all("\n" not in value for value in (title, builder)) and track in TRACKS):
-        raise ValueError("Check the title, builder, track and key prompt fields.")
+            and all("\n" not in value for value in (title, builder))):
+        raise ValueError("Check the game title, team name and your AI request.")
     row = {
         "id": identifier, "kind": "submission", "title": title, "builder": builder,
-        "github": github, "track": TRACKS[track], "prompt": prompt, "issue": issue["number"],
-        "url": public_url(game_url),
+        "github": github, "prompt": prompt, "issue": issue["number"],
+        "url": public_url(game_url), **extras,
     }
     if assisted:
         row["assisted"] = True
-    if linkedin not in {"", "_No response_"}:
-        linkedin_url = public_url(linkedin)
-        if urlsplit(linkedin_url).hostname not in {"linkedin.com", "www.linkedin.com"}:
-            raise ValueError("The optional LinkedIn URL must use linkedin.com.")
-        row["linkedin"] = linkedin_url
     return row
 
 
@@ -130,7 +141,8 @@ def main():
     approved_labels = {label["name"] for label in issue["labels"]} & approval_labels
     current_labels = {label["name"] for label in current["labels"]} & approval_labels
     if (current["state"] != "open" or not REQUIRED_LABELS.issubset(approved_labels)
-            or current_labels != approved_labels or issue["body"] != current["body"]):
+            or current_labels != approved_labels or issue["body"] != current["body"]
+            or issue["title"] != current["title"]):
         raise ValueError("The submission changed, closed or lost approval. Review it and apply approved again.")
     if json.loads(Path("submissions/event.json").read_text())["state"] != "pending":
         raise ValueError("The submission list is locked for the audience ballot.")
