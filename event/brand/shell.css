@@ -28,6 +28,7 @@ body { min-height: 100svh; margin: 0; isolation: isolate; }
   aspect-ratio: 1.18;
   left: 64%;
   top: 42%;
+  opacity: .82;
   background: radial-gradient(ellipse, #f7f5f068 0%, #aebbc080 29%, #66899852 49%, transparent 71%);
 }
 .ambient::after {
@@ -66,6 +67,9 @@ body { min-height: 100svh; margin: 0; isolation: isolate; }
 a { color: inherit; text-underline-offset: .2em; }
 :focus-visible { outline: 2px solid var(--cream); outline-offset: 4px; }
 h1, h2, h3 { font-family: var(--display); letter-spacing: -.03em; }
+@media (max-width: 46rem) {
+  .ambient::before { left: 74%; top: 48%; opacity: .55; }
+}
 @media (max-width: 30rem) {
   .society-nav { gap: .4rem .8rem; }
   .society-nav a { font-size: .875rem; }
