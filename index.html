@@ -8,7 +8,7 @@
   Keep the game in this one HTML file with inline CSS and JavaScript.
   Keep Space, Arrow Up and tap working, along with pause, restart and resizing.
   Physics use seconds in a fixed-step loop. Never tie movement to screen refresh.
-  The default is a gentle three-life game. Preserve its wide, reachable gaps unless asked.
+  The default is a three-life game with a gradual difficulty ramp. Keep each gap reachable.
   The labelled zones below show where to change artwork, physics, obstacles and scoring.
   After editing, check the first launch, all three lives, restart and a phone-size view.
 -->
@@ -61,11 +61,12 @@
 
 // === AI PROMPT ZONE: CONFIG ===
 // Positions are pixels, speed is pixels/second, gravity is pixels/second².
-// Start with colours or one mechanic. Keep the first flight gentle and readable.
+// Start with colours or one mechanic. The first gates teach the rhythm. Speed and gap difficulty then ramp over a minute.
 const W = 400, H = 600;
-const GRAVITY = 760, FLAP_STRENGTH = -250, MAX_FALL_SPEED = 340;
-const PIPE_GAP = 250, PIPE_WIDTH = 58, PIPE_SPEED = 120, PIPE_SPACING = 270;
-const GROUND_H = 50, START_LIVES = 3, RECOVERY_SECONDS = 1.6, STEP = 1 / 120;
+const GRAVITY = 880, FLAP_STRENGTH = -285, MAX_FALL_SPEED = 400;
+const PIPE_GAP = 205, MIN_PIPE_GAP = 145, PIPE_WIDTH = 58, PIPE_SPACING = 260;
+const PIPE_SPEED = 140, MAX_PIPE_SPEED = 220, RAMP_DELAY = 8, RAMP_SECONDS = 60;
+const GROUND_H = 50, START_LIVES = 3, RECOVERY_SECONDS = 1.2, STEP = 1 / 120;
 const COLORS = { navy:"#073B5C", cream:"#F7F5F0", bird:"#FFC93C", beak:"#FF7A00", pipe:"#0E5A8A", ground:"#C9B79C" };
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -139,18 +140,24 @@ function updateBird(dt) {
 }
 
 // === AI PROMPT ZONE: PIPES / LEVEL ===
-// The first two gaps are centered. Later gaps move by at most 45px.
+// The first two gaps are centered. Later gaps move farther as the run progresses.
+// Store each new gap on its pipe. Existing gaps stay still while the player approaches.
 // Every visible pipe endcap belongs to its collision box.
 function updatePipes(dt) {
+  const difficulty = Math.min(1, Math.max(0, (elapsed - RAMP_DELAY) / RAMP_SECONDS));
+  const speed = PIPE_SPEED + (MAX_PIPE_SPEED - PIPE_SPEED) * difficulty;
   const last = pipes[pipes.length - 1];
   if (!last || last.x <= W - PIPE_SPACING) {
-    if (score > 0) nextCenter = Math.max(180, Math.min(370, nextCenter + (Math.random() * 2 - 1) * 45));
-    pipes.push({ x:last ? W : W + 140, top:nextCenter - PIPE_GAP / 2, passed:false });
+    const gap = PIPE_GAP + (MIN_PIPE_GAP - PIPE_GAP) * difficulty;
+    const drift = 55 + 30 * difficulty;
+    if (score > 0) nextCenter = Math.max(gap / 2 + 50,
+      Math.min(H - GROUND_H - gap / 2 - 50, nextCenter + (Math.random() * 2 - 1) * drift));
+    pipes.push({ x:last ? W : W + 100, top:nextCenter - gap / 2, gap, passed:false });
   }
   for (const pipe of pipes) {
-    pipe.x -= PIPE_SPEED * dt;
+    pipe.x -= speed * dt;
     const overlaps = bird.x + bird.r - 3 > pipe.x && bird.x - bird.r + 3 < pipe.x + PIPE_WIDTH;
-    const outsideGap = bird.y - bird.r + 3 < pipe.top || bird.y + bird.r - 3 > pipe.top + PIPE_GAP;
+    const outsideGap = bird.y - bird.r + 3 < pipe.top || bird.y + bird.r - 3 > pipe.top + pipe.gap;
     if (!recovery && overlaps && outsideGap) {
       loseLife(pipe);
       if (state === "over") return;
@@ -181,7 +188,7 @@ function loseLife(pipe) {
   }
   recovery = RECOVERY_SECONDS;
   const next = pipe || pipes.find(item => item.x + PIPE_WIDTH >= bird.x - bird.r);
-  bird.y = next ? next.top + PIPE_GAP / 2 : 285;
+  bird.y = next ? next.top + next.gap / 2 : 285;
   bird.vy = 0;
   statusEl.textContent = lives + (lives === 1 ? " life left." : " lives left.") + " Keep flapping.";
 }
@@ -204,10 +211,10 @@ function drawPipes() {
   for (const pipe of pipes) {
     ctx.fillStyle = COLORS.pipe;
     ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
-    ctx.fillRect(pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, H - GROUND_H - pipe.top - PIPE_GAP);
+    ctx.fillRect(pipe.x, pipe.top + pipe.gap, PIPE_WIDTH, H - GROUND_H - pipe.top - pipe.gap);
     ctx.fillStyle = COLORS.navy;
     ctx.fillRect(pipe.x, pipe.top - 16, PIPE_WIDTH, 16);
-    ctx.fillRect(pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, 16);
+    ctx.fillRect(pipe.x, pipe.top + pipe.gap, PIPE_WIDTH, 16);
   }
 }
 function drawBird() {
@@ -249,7 +256,7 @@ function drawUI() {
     drawText("FLAPPY AI JAM", 225, 32);
     drawText("Three lives. Find your rhythm.", 270, 18);
     drawText("Tap or press Space to flap", 315, 18);
-    drawText("Keep tapping to stay in the air", 345, 16);
+    drawText("It gets faster as you go", 345, 16);
   } else if (state === "paused") {
     drawText("PAUSED", 235, 32);
     drawText("Tap or press Space to resume", 305, 18);

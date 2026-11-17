@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
   Flappy AI Jam reference game · University of Portsmouth AI Society
-  This demo is self-contained and starts in continuous practice.
-  Bumps recover the player, so live visitors can try the mechanic in one turn.
+  This demo is self-contained. Each round has three lives and lasts up to 90 seconds.
+  Speed and obstacles build gradually. Existing gaps keep their original shape.
   AI agents: preserve the fixed-step loop, keyboard and tap controls, and mic fallback.
   Start from the smaller index.html when making a new jam entry.
 -->
@@ -61,7 +61,7 @@
     <div class="overlay" id="overlay">
       <div class="dialogue">
         <h2 id="overlay-title">Meet the boss</h2>
-        <p id="overlay-detail">Space or tap to flap. Shift or Dash gives you a short shield. Bumps let you keep playing.</p>
+        <p id="overlay-detail">Space or tap to flap. Shift or Dash gives you a short shield. You have three lives. Each wave gets tougher.</p>
         <button class="primary" id="flight-action" type="button"><span id="flight-action-label">Play</span></button>
       </div>
     </div>
@@ -70,7 +70,7 @@
 </main>
 <footer>
   <p id="flight-controls">SPACE / ↑ / TAP · SHIFT TO DASH</p>
-  <p>Practice · bumps won’t end your turn</p>
+  <p>Lives <span id="lives">3</span> · <span id="round-time">1:30</span> left</p>
   <div class="actions">
     <button id="mod-toggle" type="button">Dash</button>
     <button id="pause" type="button" disabled>Pause</button>
@@ -87,7 +87,7 @@
   const canvas = byId("game");
   const ctx = canvas.getContext("2d", { alpha: false });
   const ui = {
-    score: byId("score"), high: byId("best"), overlay: byId("overlay"), title: byId("overlay-title"),
+    score: byId("score"), high: byId("best"), lives: byId("lives"), time: byId("round-time"), overlay: byId("overlay"), title: byId("overlay-title"),
     detail: byId("overlay-detail"), action: byId("flight-action"), actionLabel: byId("flight-action-label"),
     announcer: byId("announcer"), pause: byId("pause"), mute: byId("mute"),
   };
@@ -101,7 +101,7 @@
   }
 
   // === AI PROMPT ZONE: CONFIG ===
-  // Logical pixels, seconds and px/s². Keep the wide gaps and recovery for live play.
+  // Logical pixels, seconds and px/s². Increase difficulty gradually and preserve recovery between hits.
   const CONFIG = Object.freeze({
     width: 480,
     height: 640,
@@ -113,23 +113,25 @@
     playerY: 320,
     playerHalfWidth: 15,
     playerHalfHeight: 10,
-    gravity: 820,
-    thrust: 265,
-    terminalSpeed: 360,
+    gravity: 900,
+    thrust: 290,
+    terminalSpeed: 410,
     gateWidth: 64,
-    gateSpacing: 280,
-    firstGateX: 620,
-    gateSpeed: 120,
-    maxGateSpeed: 150,
-    gateSpeedPerPoint: 1,
-    gap: 260,
-    minGap: 240,
-    gapPerPoint: 0.5,
-    gapCenterDrift: 45,
+    gateSpacing: 265,
+    firstGateX: 560,
+    gateSpeed: 145,
+    maxGateSpeed: 225,
+    gap: 230,
+    minGap: 160,
+    gapCenterDrift: 65,
     gatePoolSize: 6,
     particlePoolSize: 160,
     trailInterval: 1 / 36,
     recoverySeconds: 1.2,
+    lives: 3,
+    roundSeconds: 90,
+    rampDelay: 8,
+    rampSeconds: 60,
     scoreKey: "03-overclock-boss-protocol-best",
     muteKey: "protocolAeroMuted",
   });
@@ -146,7 +148,7 @@
   const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
   const mix = (a, b, alpha) => a + (b - a) * alpha;
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const PHASE = Object.freeze({ READY: "READY", RUNNING: "RUNNING", PAUSED: "PAUSED" });
+  const PHASE = Object.freeze({ READY: "READY", RUNNING: "RUNNING", PAUSED: "PAUSED", FINISHED: "FINISHED" });
 
   // File previews and sandboxed
   // frames can deny storage, so the in-memory score remains the source of truth.
@@ -257,8 +259,8 @@
       const current = this.#phase;
       const allowed =
         (current === PHASE.READY && next === PHASE.RUNNING) ||
-        (current === PHASE.RUNNING && next === PHASE.PAUSED) ||
-        (current === PHASE.PAUSED && next === PHASE.RUNNING);
+        (current === PHASE.RUNNING && (next === PHASE.PAUSED || next === PHASE.FINISHED)) ||
+        ((current === PHASE.PAUSED || current === PHASE.FINISHED) && next === PHASE.RUNNING);
       if (!allowed) return false;
       this.#phase = next;
       return true;
@@ -308,6 +310,8 @@
   let lastGateCenter = CONFIG.playerY;
   let firstGate = true;
   let recovery = 0;
+  let lives = CONFIG.lives;
+  let endedAt = -Infinity;
 
   const stateView = Object.freeze({
     get phase() { return machine.phase; },
@@ -316,6 +320,7 @@
     get tick() { return tick; },
     get elapsed() { return tick * CONFIG.step; },
     get score() { return score; },
+    get lives() { return lives; },
     get highScore() { return highScore; },
     player: playerView,
   });
@@ -423,13 +428,22 @@
     return (gateRandomState >>> 0) / 4294967296;
   }
 
+  function difficulty() {
+    return clamp((tick * CONFIG.step - CONFIG.rampDelay) / CONFIG.rampSeconds, 0, 1);
+  }
+
+  function flightSpeed() {
+    return mix(CONFIG.gateSpeed, CONFIG.maxGateSpeed, difficulty());
+  }
+
   function spawnGate(x) {
     for (let i = 0; i < gates.length; i++) {
       const gate = gates[i];
       if (gate.active) continue;
-      const halfGap = Math.max(CONFIG.minGap, CONFIG.gap - score * CONFIG.gapPerPoint) / 2;
+      const level = difficulty();
+      const halfGap = mix(CONFIG.gap, CONFIG.minGap, level) / 2;
       const center = firstGate ? CONFIG.playerY : clamp(
-        lastGateCenter + (nextGateRandom() * 2 - 1) * CONFIG.gapCenterDrift,
+        lastGateCenter + (nextGateRandom() * 2 - 1) * (CONFIG.gapCenterDrift + level * 30),
         CONFIG.top + halfGap + 42, CONFIG.bottom - halfGap - 42,
       );
       gate.active = true;
@@ -451,6 +465,8 @@
     runSeed = Math.floor(Math.random() * 4294967296) || 1;
     gateRandomState = runSeed | 0;
     score = tick = recovery = 0;
+    lives = CONFIG.lives;
+    ui.lives.textContent = String(lives);
     player.y = player.prevY = CONFIG.playerY;
     player.vy = player.prevVy = 0;
     distance = prevDistance = trailTime = 0;
@@ -525,10 +541,16 @@
     invoke("onScore", score);
   }
 
-  // Demo practice recovers in the nearest gap. It never opens a game-over screen.
-  // Collision recovery is timed in simulation seconds and cannot drain on pause.
+  // One collision costs one life. Recovery prevents one obstacle taking all three.
+  // Pausing also pauses the round clock and difficulty ramp.
   function breach(obstacle) {
-    if (recovery > 0) return;
+    if (recovery > 0 || machine.phase !== PHASE.RUNNING) return;
+    lives--;
+    ui.lives.textContent = String(lives);
+    if (lives === 0) {
+      finishRun("Flight over");
+      return;
+    }
     recovery = CONFIG.recoverySeconds;
     player.y = player.prevY = obstacle ? (obstacle.top + obstacle.bottom) / 2 : CONFIG.playerY;
     player.vy = player.prevVy = 0;
@@ -537,9 +559,23 @@
     invoke("onCollision", playerView, obstacle);
   }
 
+  function finishRun(title) {
+    if (!changePhase(PHASE.FINISHED)) return;
+    endedAt = performance.now();
+    thrustQueued = false;
+    ui.title.textContent = title;
+    ui.detail.textContent = "Score " + score + " · Best " + highScore;
+    ui.actionLabel.textContent = "Play again";
+    ui.announcer.textContent = title + ". Score " + score + ".";
+  }
+
   // === AI PROMPT ZONE: PHYSICS ===
   function simulate(dt) {
     tick++;
+    if (tick >= Math.round(CONFIG.roundSeconds / CONFIG.step)) {
+      finishRun("Round complete");
+      return;
+    }
     recovery = Math.max(0, recovery - dt);
     player.prevY = player.y;
     player.prevVy = player.vy;
@@ -558,7 +594,7 @@
     if (dash > 0) player.vy = dashDirection * CONFIG.terminalSpeed;
     player.y += player.vy * dt;
 
-    gateSpeed = boss.phase === "IDLE" ? Math.min(CONFIG.maxGateSpeed, CONFIG.gateSpeed + score * CONFIG.gateSpeedPerPoint) : 0;
+    gateSpeed = boss.phase === "IDLE" ? flightSpeed() : 0;
     distance += gateSpeed * dt;
     let farthest = -CONFIG.gateWidth;
     for (let i = 0; i < gates.length; i++) {
@@ -606,6 +642,7 @@
     // Collision takes precedence. Award only once, after the entire hull clears.
     for (let i = 0; i < gates.length; i++) {
       const gate = gates[i];
+      if (machine.phase !== PHASE.RUNNING) return;
       if (gate.active && !gate.scored && gate.x + CONFIG.gateWidth < left) clearGate(gate);
     }
   }
@@ -760,6 +797,7 @@
     ui.overlay.hidden = next === PHASE.RUNNING;
     ui.pause.disabled = next !== PHASE.RUNNING && next !== PHASE.PAUSED;
     ui.pause.textContent = next === PHASE.PAUSED ? "Resume" : "Pause";
+    byId("mod-toggle").disabled = next !== PHASE.RUNNING || cooldown > 0;
     switch (next) {
       case PHASE.RUNNING:
         ui.announcer.textContent = "Flight in progress.";
@@ -803,7 +841,7 @@
   }
 
   function flightInput() {
-    if (document.hidden) return;
+    if (document.hidden || (machine.phase === PHASE.FINISHED && performance.now() - endedAt < 350)) return;
     sound.unlock();
     if (machine.phase === PHASE.PAUSED) {
       resumeFlight();
@@ -869,6 +907,9 @@
       accumulator = 0;
     }
     const alpha = machine.phase === PHASE.RUNNING ? accumulator / CONFIG.step : 1;
+    const remaining = Math.max(0, Math.ceil(CONFIG.roundSeconds - tick * CONFIG.step));
+    const time = Math.floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0");
+    if (ui.time.textContent !== time) ui.time.textContent = time;
     render(alpha);
     requestAnimationFrame(frame);
   }
@@ -953,11 +994,11 @@
     if (boss.shot % 3 === 2) {
       const vy = clamp((player.y - boss.y) * 1.1, -165, 165);
       for (let offset = -1; offset <= 1; offset++) {
-        addShot(408, boss.y, -150, vy + offset * 40);
+        addShot(408, boss.y, -(170 + difficulty() * 70), vy + offset * 45);
       }
     } else {
       for (let lane = 0; lane < lanes.length; lane++) {
-        if (Math.abs(lane - safeLane) > 1) addShot(408, lanes[lane], -160, 0);
+        if (Math.abs(lane - safeLane) > 1) addShot(408, lanes[lane], -(180 + difficulty() * 70), 0);
       }
     }
     boss.shot++;
@@ -1020,7 +1061,7 @@
           boss.clock = 0;
         } else if (boss.clock >= boss.nextShot) {
           firePattern();
-          boss.nextShot += 1.5;
+          boss.nextShot += 1.35 - difficulty() * .45;
         }
       }
       if (boss.phase === "RECOVERY" && boss.clock >= 2.8) {
