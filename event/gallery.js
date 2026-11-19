@@ -1,4 +1,7 @@
-import { loadEvent, loadManifest, awardsFor, isGeminiShare, publicGameUrl } from "./state.js";
+import {
+  awardsFor, isGeminiShare, loadEvent, loadManifest, loadPublishedGame,
+  publicGameUrl, publishedGamePath, standaloneGameDocument,
+} from "./state.js";
 const curated = new Map([
   ["baseline", { path: "index.html", controls: "Press Space, the up arrow or tap to flap. You have three lives. Press P to pause." }],
   ["01-neural-autopilot", { path: "examples/01-neural-autopilot.html", controls: "Choose Play to watch the autopilot. Press A or choose Autopilot to fly manually." }],
@@ -100,7 +103,7 @@ function validBuild(build) {
   const expectedKind = build.id === "baseline" ? "baseline" : curated.has(build.id) ? "reference" : "submission";
   const expectedId = build.assisted === true ? "entry--" + build.issue : build.github.toLowerCase();
   return build.kind === expectedKind && (expectedKind !== "submission" ||
-    (build.id === expectedId && Boolean(publicGameUrl(build.url)) &&
+    (build.id === expectedId && Boolean(publishedGamePath(build) || publicGameUrl(build.url)) &&
       Number.isSafeInteger(build.issue) && build.issue > 0));
 }
 
@@ -198,7 +201,7 @@ function resizeFrame() {
   frameBox.style.setProperty("--frame-scale", String(frameBox.clientWidth / 480));
 }
 
-function launchBuild(build) {
+async function launchBuild(build) {
   frame?.remove();
   frame = null;
   active = build;
@@ -208,19 +211,25 @@ function launchBuild(build) {
   byId("copy-status").textContent = "";
   byId("share-url").hidden = true;
   const known = curated.get(build.id);
+  const source = known ? "" : publishedGamePath(build);
   const gameUrl = known?.path ?? publicGameUrl(build.url);
-  const target = new URL(gameUrl, location.href);
-  const gemini = isGeminiShare(target);
-  byId("open-game").href = gameUrl;
-  byId("player-controls").textContent = known?.controls ??
-    "If the preview is blocked or the controls do not respond, open the game in a new tab.";
+  const gemini = gameUrl && isGeminiShare(new URL(gameUrl, location.href));
+  const external = !source && gemini;
+  const openGame = byId("open-game");
+  openGame.hidden = !gameUrl;
+  if (gameUrl) openGame.href = gameUrl;
+  else openGame.removeAttribute("href");
+  openGame.textContent = source ? "Open original link ↗︎" : "Open game in new tab";
+  byId("player-controls").textContent = known?.controls ?? (source
+    ? "Play the team's submitted HTML here."
+    : "If the preview is blocked or the controls do not respond, open the game in a new tab.");
   frameMessage.hidden = false;
-  frameMessage.textContent = gemini ? "This game opens in Gemini. Use the button above to play it." : "Loading game…";
-  frameBox.classList.toggle("external-preview", gemini);
+  frameMessage.textContent = external ? "This game opens in Gemini. Use the button above to play it." : "Loading game…";
+  frameBox.classList.toggle("external-preview", Boolean(external));
   if (!dialog.open) dialog.showModal();
-  if (gemini) {
+  if (external) {
     byId("player-controls").textContent = "Open the link in your browser. If Gemini asks you to sign in or the preview is unavailable, try a different game.";
-    byId("open-game").focus();
+    openGame.focus();
     return;
   }
   resizeFrame();
@@ -232,10 +241,23 @@ function launchBuild(build) {
   preview.setAttribute("sandbox", "allow-scripts");
   preview.setAttribute("allow", "microphone 'none'; camera 'none'");
   preview.referrerPolicy = "no-referrer";
-  preview.src = gameUrl;
   preview.addEventListener("load", () => { if (frame === preview) frameMessage.hidden = true; });
   frame = preview;
-  frameBox.append(preview);
+  try {
+    if (source) {
+      const html = await loadPublishedGame(source);
+      if (frame !== preview) return;
+      preview.srcdoc = standaloneGameDocument(html);
+    } else {
+      preview.src = gameUrl;
+    }
+    frameBox.append(preview);
+  } catch {
+    if (frame !== preview) return;
+    frameMessage.textContent = gameUrl
+      ? "The game file couldn’t load. Try the original link above."
+      : "The game file couldn’t load. Close and reopen the game to try again.";
+  }
 }
 
 dialog.addEventListener("close", () => {

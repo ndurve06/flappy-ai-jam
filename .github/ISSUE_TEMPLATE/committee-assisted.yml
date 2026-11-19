@@ -5,7 +5,7 @@ labels: ["submission", "committee-assisted"]
 body:
   - type: markdown
     attributes:
-      value: Enter the game name in the issue title. Check the game in a private window and confirm the team agrees to publish these details.
+      value: Enter the game name in the issue title. Provide a playable link, full single-file HTML, or both. Test the game and confirm the team agrees to publish these details and any supplied code.
   - type: input
     id: builder
     attributes:
@@ -25,7 +25,11 @@ body:
     id: game_url
     attributes:
       label: Link to play your game
-      description: Paste only the link from Canvas Share → Copy link or the direct link to your published game. Check that someone can play it in a private browser window.
-      placeholder: https://share.gemini.google/…
-    validations:
-      required: true
+      description: Enter the live GitHub Pages URL or any public link that opens the game. This works for games with multiple files. You can also enter a Canvas share link.
+      placeholder: https://your-username.github.io/your-game/
+  - type: textarea
+    id: game_html
+    attributes:
+      label: Single-file HTML
+      description: Optional if you gave a game link. Paste the complete index.html without code fences. If your game uses additional files or the HTML is over 50,000 characters, use the live link above.
+      render: html

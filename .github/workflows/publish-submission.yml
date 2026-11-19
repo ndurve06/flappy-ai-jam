@@ -100,7 +100,7 @@ jobs:
             else
               python3 .github/scripts/manage_event.py
             fi
-            git add -- submissions/manifest.json submissions/event.json
+            git add -- submissions
             if git diff --cached --quiet; then break; fi
             git commit -m 'chore: update Flappy AI Jam event'
             if git push origin HEAD:main; then break; fi
@@ -123,7 +123,7 @@ jobs:
           mkdir -p "$site/submissions"
           cp index.html arcade.html showcase.html vote.html "$site/"
           cp -r event examples "$site/"
-          cp submissions/manifest.json submissions/event.json "$site/submissions/"
+          cp -r submissions/. "$site/submissions/"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         if: steps.pages_source.outputs.type == 'workflow' && steps.submission.outputs.publish != 'false'
         with:
