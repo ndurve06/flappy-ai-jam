@@ -1,0 +1,31 @@
+name: Committee-assisted Build
+description: For committee members entering a game for a participant at the help desk.
+title: "[Game] "
+labels: ["submission", "committee-assisted"]
+body:
+  - type: markdown
+    attributes:
+      value: Enter the game name in the issue title. Check the game in a private window and confirm the team agrees to publish these details.
+  - type: input
+    id: builder
+    attributes:
+      label: Name or team name
+      placeholder: Team Seagull
+    validations:
+      required: true
+  - type: textarea
+    id: prompt
+    attributes:
+      label: What did you ask the AI to change?
+      description: Copy the request you sent, or describe it in one sentence.
+      placeholder: I asked it to make the game look like a museum at night.
+    validations:
+      required: true
+  - type: input
+    id: game_url
+    attributes:
+      label: Link to play your game
+      description: Paste only the link from Canvas Share → Copy link or the direct link to your published game. Check that someone can play it in a private browser window.
+      placeholder: https://share.gemini.google/…
+    validations:
+      required: true

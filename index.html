@@ -6,7 +6,12 @@
 
   FOR AI CODING AGENTS
   Keep the game in this one HTML file with inline CSS and JavaScript.
-  Keep Space, Arrow Up and tap working, along with pause, restart and resizing.
+  Keep Space, Arrow Up, mouse and touch working, along with pause, restart and resizing.
+  Use Canvas shapes and inline styles. Avoid external images, libraries, fonts or packages.
+  Keep the labelled AI PROMPT ZONE comments and edit the working Canvas in place.
+  If you return code as text, return the complete file from <!DOCTYPE html> to </html>.
+  Keep best-score storage optional. Wrap all localStorage reads and writes in try/catch
+  so the game works inside sandboxed previews even when storage is unavailable.
   Physics use seconds in a fixed-step loop. Never tie movement to screen refresh.
   The default is a three-life game with a gradual difficulty ramp. Keep each gap reachable.
   The labelled zones below show where to change artwork, physics, obstacles and scoring.
@@ -16,6 +21,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Flappy AI Jam · UoP AI Society</title>
 <style>
   :root { --ink:#021825; --navy:#073B5C; --cream:#F7F5F0; }

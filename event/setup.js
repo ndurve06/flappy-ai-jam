@@ -6,7 +6,7 @@ async function loadStarter() {
     const response = await fetch("index.html");
     if (!response.ok) throw new Error("Starter unavailable");
     const html = await response.text();
-    const prompt = "Open this complete HTML game in Gemini Canvas and show me a playable preview. Keep the game as it is for now. Use the whole file below.\n\n" + html;
+    const prompt = "Open this complete HTML game in Gemini Canvas and show a playable preview. Keep the game as it is for now. Follow the rules at the top of the file for all later edits.\n\n" + html;
     copyStarter.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(prompt);

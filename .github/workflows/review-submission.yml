@@ -1,0 +1,17 @@
+name: Review Jam Submission
+
+on:
+  issues:
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  publish:
+    if: github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'submission')
+    permissions:
+      contents: write
+      issues: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publish-submission.yml

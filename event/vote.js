@@ -62,10 +62,14 @@ function renderChoices(event) {
     play.target = "_blank";
     play.rel = "noopener";
     play.setAttribute("aria-label", "Play " + candidate.title + " in a new tab");
-    row.append(radio, label, play);
+    if (event.paperOnly) {
+      row.append(element("span", (index + 1) + "."), element("span", candidate.title + " · " + candidate.builder), play);
+    } else {
+      row.append(radio, label, play);
+    }
     choices.append(row);
   }
-  cast.href = repository + "/issues/" + event.issue + "#new_comment_field";
+  if (!event.paperOnly) cast.href = repository + "/issues/" + event.issue + "#new_comment_field";
 }
 
 form.addEventListener("change", () => { byId("vote-code").hidden = true; });
@@ -107,14 +111,17 @@ async function refresh() {
     if (rendered === key) return;
     const open = event.state === "open";
     const closed = event.state === "closed";
-    status.textContent = open ? "Voting is open."
+    const paperOnly = event.paperOnly === true;
+    status.textContent = open ? paperOnly ? "Voting is open on paper." : "Voting is open."
       : closed ? "Voting is closed."
       : "Voting opens after the demos. You can try the games in the Hall of Fame while you wait.";
-    projectorStatus.textContent = open ? "Pick one game. Use a paper slip or scan to vote online."
+    projectorStatus.textContent = open ? paperOnly ? "Pick one game. Write its number on your paper slip." : "Pick one game. Use a paper slip or scan to vote online."
       : closed ? "Voting has closed. Scan to see the results."
       : "Scan to open the ballot. Voting starts after the demos.";
     choices.replaceChildren();
     form.hidden = !open;
+    byId("online-vote").hidden = paperOnly;
+    byId("online-help").hidden = paperOnly;
     byId("vote-code").hidden = true;
     resultList.hidden = !closed;
     byId("projector-choices").hidden = !open;

@@ -1,4 +1,4 @@
-import { loadEvent, loadManifest, awardsFor, publicGameUrl } from "./state.js";
+import { loadEvent, loadManifest, awardsFor, isGeminiShare, publicGameUrl } from "./state.js";
 const curated = new Map([
   ["baseline", { path: "index.html", controls: "Press Space, the up arrow or tap to flap. You have three lives. Press P to pause." }],
   ["01-neural-autopilot", { path: "examples/01-neural-autopilot.html", controls: "Choose Play to watch the autopilot. Press A or choose Autopilot to fly manually." }],
@@ -166,7 +166,7 @@ function renderEvent() {
   voteLink.hidden = !entriesClosed;
   voteLink.textContent = status === "closed" ? "See the vote results" : "Choose your favourite";
   byId("vote-status").textContent = {
-    open: "Voting is open. You can vote in the room or online.",
+    open: event?.paperOnly ? "Voting is open in the room. Ask for a paper slip." : "Voting is open. You can vote in the room or online.",
     closed: "Voting has closed.",
     pending: "Voting opens after the demos."
   }[status] ?? "Check the ballot for the latest status.";
@@ -210,8 +210,7 @@ function launchBuild(build) {
   const known = curated.get(build.id);
   const gameUrl = known?.path ?? publicGameUrl(build.url);
   const target = new URL(gameUrl, location.href);
-  const gemini = target.hostname === "gemini.google.com"
-    || (target.hostname === "g.co" && target.pathname.startsWith("/gemini/share/"));
+  const gemini = isGeminiShare(target);
   byId("open-game").href = gameUrl;
   byId("player-controls").textContent = known?.controls ??
     "If the preview is blocked or the controls do not respond, open the game in a new tab.";
