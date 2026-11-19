@@ -60,24 +60,27 @@
   </a>
   <span id="status" class="sr-only" role="status">Ready to play. Three lives.</span>
 </header>
-<main><canvas id="game" width="400" height="600" tabindex="0" role="img" aria-label="Flappy Bird game. Space, up arrow or tap to flap. P to pause." aria-describedby="controls">Your browser needs Canvas 2D to play this game.</canvas></main>
-<footer id="controls">SPACE / ↑ / TAP TO FLAP · P TO PAUSE</footer>
+<main><canvas id="game" width="400" height="600" tabindex="0" role="img" aria-label="Flappy Bird game with a stationary bird. Wind gusts slow the pillars. Touch red pillar tips for bonus points without losing a life. Space, up arrow or tap to flap. P to pause." aria-describedby="controls">Your browser needs Canvas 2D to play this game.</canvas></main>
+<footer id="controls">SPACE / ↑ / TAP TO FLAP · THE COURSE MOVES · P TO PAUSE</footer>
 <script>
 "use strict";
 
 // === AI PROMPT ZONE: CONFIG ===
 // Positions are pixels, speed is pixels/second, gravity is pixels/second².
 // Start with colours or one mechanic. The first gates teach the rhythm. Speed and gap difficulty then ramp over a minute.
-const W = 400, H = 600;
+const W = 400, H = 600, BIRD_SCREEN_Y = 285;
 const GRAVITY = 880, FLAP_STRENGTH = -285, MAX_FALL_SPEED = 400;
-const PIPE_GAP = 205, MIN_PIPE_GAP = 145, PIPE_WIDTH = 58, PIPE_SPACING = 260;
+const PIPE_GAP = 180, MIN_PIPE_GAP = 130, PIPE_WIDTH = 58, PIPE_SPACING = 260;
 const PIPE_SPEED = 140, MAX_PIPE_SPEED = 220, RAMP_DELAY = 8, RAMP_SECONDS = 60;
-const GROUND_H = 50, START_LIVES = 3, RECOVERY_SECONDS = 1.2, STEP = 1 / 120;
-const COLORS = { navy:"#073B5C", cream:"#F7F5F0", bird:"#FFC93C", beak:"#FF7A00", pipe:"#0E5A8A", ground:"#C9B79C" };
+const WIND_WARNING_SECONDS = 0.75, WIND_PIPE_SPEED_FACTOR = 0.45;
+const START_LIVES = 3, RECOVERY_SECONDS = 1.2, BONUS_FEEDBACK_SECONDS = 1, STEP = 1 / 120;
+const COLORS = { navy:"#073B5C", cream:"#F7F5F0", bird:"#FFC93C", beak:"#FF7A00", pipe:"#0E5A8A", bonusTip:"#C62828" };
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
-let state = "start", bird, pipes, score, lives, recovery, elapsed, nextCenter;
+let state = "start", bird, pipes, score, lives, recovery, elapsed, nextCenter, pipesSpawned, nextBonusPipe;
+let windDirection, windWarning, windRemaining, nextWindIn;
+let bonusFeedbackTimer = 0;
 let overAt = 0, best = 0, lastTime = null, accumulator = 0;
 try {
   const stored = Number(localStorage.getItem("flappyAiJamBest"));
@@ -94,11 +97,16 @@ addEventListener("resize", resize);
 resize();
 
 function reset() {
-  bird = { x:100, y:285, vy:0, r:15 };
+  bird = { x:100, y:BIRD_SCREEN_Y, vy:0, r:15 };
   pipes = [];
   score = elapsed = recovery = 0;
   lives = START_LIVES;
   nextCenter = bird.y;
+  pipesSpawned = 0;
+  nextBonusPipe = 3 + Math.floor(Math.random() * 3);
+  bonusFeedbackTimer = 0;
+  windDirection = windWarning = windRemaining = 0;
+  nextWindIn = 2.5 + Math.random() * 3.5;
 }
 
 // === AI PROMPT ZONE: PHYSICS & INPUT ===
@@ -130,18 +138,31 @@ function pause() {
   lastTime = null;
   accumulator = 0;
 }
+function updateWind(dt) {
+  if (windRemaining > 0) {
+    windRemaining = Math.max(0, windRemaining - dt);
+    if (!windRemaining) {
+      windDirection = 0;
+      nextWindIn = 3 + Math.random() * 4;
+    }
+  } else if (windWarning > 0) {
+    windWarning = Math.max(0, windWarning - dt);
+    if (!windWarning) windRemaining = 1.2 + Math.random() * 1.2;
+  } else {
+    nextWindIn -= dt;
+    if (nextWindIn <= 0) {
+      windDirection = Math.random() < 0.5 ? -1 : 1;
+      windWarning = WIND_WARNING_SECONDS;
+    }
+  }
+}
 function updateBird(dt) {
   bird.vy = Math.min(MAX_FALL_SPEED, bird.vy + GRAVITY * dt);
   bird.y += bird.vy * dt;
-  // The ceiling is forgiving. The floor uses the same life/recovery rule as pipes.
+  // Keep the bird from flying above the world; there is no floor collision.
   if (bird.y < bird.r) {
     bird.y = bird.r;
     bird.vy = Math.max(0, bird.vy);
-  }
-  if (bird.y + bird.r > H - GROUND_H) {
-    bird.y = H - GROUND_H - bird.r;
-    bird.vy = 0;
-    loseLife();
   }
 }
 
@@ -151,38 +172,59 @@ function updateBird(dt) {
 // Every visible pipe endcap belongs to its collision box.
 function updatePipes(dt) {
   const difficulty = Math.min(1, Math.max(0, (elapsed - RAMP_DELAY) / RAMP_SECONDS));
-  const speed = PIPE_SPEED + (MAX_PIPE_SPEED - PIPE_SPEED) * difficulty;
+  const speed = (PIPE_SPEED + (MAX_PIPE_SPEED - PIPE_SPEED) * difficulty)
+    * (windRemaining > 0 ? WIND_PIPE_SPEED_FACTOR : 1);
   const last = pipes[pipes.length - 1];
   if (!last || last.x <= W - PIPE_SPACING) {
     const gap = PIPE_GAP + (MIN_PIPE_GAP - PIPE_GAP) * difficulty;
     const drift = 55 + 30 * difficulty;
     if (score > 0) nextCenter = Math.max(gap / 2 + 50,
-      Math.min(H - GROUND_H - gap / 2 - 50, nextCenter + (Math.random() * 2 - 1) * drift));
-    pipes.push({ x:last ? W : W + 100, top:nextCenter - gap / 2, gap, passed:false });
+      Math.min(H - gap / 2 - 50, nextCenter + (Math.random() * 2 - 1) * drift));
+    pipesSpawned++;
+    const bonus = pipesSpawned === nextBonusPipe;
+    if (bonus) nextBonusPipe += 3 + Math.floor(Math.random() * 3);
+    pipes.push({ x:last ? W : W + 100, top:nextCenter - gap / 2, gap, passed:false, bonus, bonusCollected:false });
   }
   for (const pipe of pipes) {
     pipe.x -= speed * dt;
     const overlaps = bird.x + bird.r - 3 > pipe.x && bird.x - bird.r + 3 < pipe.x + PIPE_WIDTH;
     const outsideGap = bird.y - bird.r + 3 < pipe.top || bird.y + bird.r - 3 > pipe.top + pipe.gap;
-    if (!recovery && overlaps && outsideGap) {
+    const hitsBonusTip = pipe.bonus && overlaps && touchesPipeTip(pipe);
+    if (hitsBonusTip) {
+      if (!pipe.bonusCollected) {
+        pipe.bonusCollected = true;
+        awardPoints(1);
+        bonusFeedbackTimer = BONUS_FEEDBACK_SECONDS;
+      }
+    } else if (!recovery && overlaps && outsideGap) {
       loseLife(pipe);
       if (state === "over") return;
     }
     if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x - bird.r) {
       pipe.passed = true;
-      score++;
-      if (score > best) {
-        best = score;
-        try { localStorage.setItem("flappyAiJamBest", String(best)); } catch { /* Optional. */ }
-      }
+      awardPoints(1);
     }
   }
   pipes = pipes.filter(pipe => pipe.x + PIPE_WIDTH > 0);
 }
 
 // === AI PROMPT ZONE: SCORE & GAME OVER ===
-// One contact costs one life. Recovery prevents overlapping obstacles taking all lives.
+// Ordinary pillar contact costs one life; bonus tips reward contact without a life loss.
 // Return immediately when the last life is lost. Never score after game over.
+function touchesPipeTip(pipe) {
+  const birdTop = bird.y - bird.r + 3;
+  const birdBottom = bird.y + bird.r - 3;
+  const lowerTipTop = pipe.top + pipe.gap;
+  return (birdBottom > pipe.top - 16 && birdTop < pipe.top)
+    || (birdBottom > lowerTipTop && birdTop < lowerTipTop + 16);
+}
+function awardPoints(points) {
+  score += points;
+  if (score > best) {
+    best = score;
+    try { localStorage.setItem("flappyAiJamBest", String(best)); } catch { /* Optional. */ }
+  }
+}
 function loseLife(pipe) {
   if (recovery || state !== "playing") return;
   lives--;
@@ -201,31 +243,57 @@ function loseLife(pipe) {
 
 // === AI PROMPT ZONE: GRAPHICS ===
 // Draw with shapes. Keep controls and the score legible over any new artwork.
+// The bird stays anchored on screen while the world follows its simulated flight.
 function drawBackground() {
+  const worldOffset = BIRD_SCREEN_Y - bird.y;
   ctx.fillStyle = COLORS.cream;
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "rgba(7,59,92,0.08)";
   for (let i = 0; i < 4; i++) {
     const x = ((i * 140 - elapsed * 24) % (W + 120) + W + 120) % (W + 120) - 60;
     ctx.beginPath();
-    ctx.arc(x, 80 + i * 45, 30, 0, Math.PI * 2);
-    ctx.arc(x + 30, 75 + i * 45, 22, 0, Math.PI * 2);
+    ctx.arc(x, 80 + i * 45 + worldOffset, 30, 0, Math.PI * 2);
+    ctx.arc(x + 30, 75 + i * 45 + worldOffset, 22, 0, Math.PI * 2);
     ctx.fill();
   }
 }
+function drawWindWarning() {
+  if (!windWarning) return;
+  const progress = 1 - windWarning / WIND_WARNING_SECONDS;
+  ctx.save();
+  ctx.strokeStyle = "rgba(14,90,138," + (0.3 + progress * 0.5) + ")";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 3; i++) {
+    const x = bird.x - windDirection * (38 + i * 15) + windDirection * progress * 16;
+    const y = BIRD_SCREEN_Y - 42 + i * 16;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + windDirection * 8, y - 5, x + windDirection * 18, y - 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + windDirection * 3, y + 4);
+    ctx.lineTo(x + windDirection * 19, y + 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawPipes() {
+  const worldOffset = BIRD_SCREEN_Y - bird.y;
   for (const pipe of pipes) {
+    const top = pipe.top + worldOffset;
+    const bottom = top + pipe.gap;
     ctx.fillStyle = COLORS.pipe;
-    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
-    ctx.fillRect(pipe.x, pipe.top + pipe.gap, PIPE_WIDTH, H - GROUND_H - pipe.top - pipe.gap);
-    ctx.fillStyle = COLORS.navy;
-    ctx.fillRect(pipe.x, pipe.top - 16, PIPE_WIDTH, 16);
-    ctx.fillRect(pipe.x, pipe.top + pipe.gap, PIPE_WIDTH, 16);
+    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, Math.max(0, top));
+    ctx.fillRect(pipe.x, bottom, PIPE_WIDTH, Math.max(0, H - bottom));
+    ctx.fillStyle = pipe.bonus ? COLORS.bonusTip : COLORS.navy;
+    ctx.fillRect(pipe.x, top - 16, PIPE_WIDTH, 16);
+    ctx.fillRect(pipe.x, bottom, PIPE_WIDTH, 16);
   }
 }
 function drawBird() {
   ctx.save();
-  ctx.translate(bird.x, bird.y);
+  ctx.translate(bird.x, BIRD_SCREEN_Y);
   ctx.rotate(Math.max(-0.4, Math.min(0.8, bird.vy / 500)));
   if (recovery) {
     ctx.strokeStyle = COLORS.navy;
@@ -242,27 +310,29 @@ function drawBird() {
   ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(24, 4); ctx.lineTo(12, 8); ctx.fill();
   ctx.restore();
 }
-function drawText(text, y, size) {
-  ctx.fillStyle = COLORS.navy;
+function drawText(text, y, size, color = COLORS.navy) {
+  ctx.fillStyle = color;
   ctx.font = "bold " + size + "px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(String(text), W / 2, y);
 }
 function drawUI() {
   drawText(score, 58, 38);
-  ctx.fillStyle = COLORS.ground;
-  ctx.fillRect(0, H - GROUND_H, W, GROUND_H);
   drawText("Lives " + lives + " / " + START_LIVES + "   ·   Best " + best, H - 18, 16);
-  if (state === "playing") return;
+  if (state === "playing") {
+    if (bonusFeedbackTimer > 0) drawText("+1!", 102, 24, COLORS.bonusTip);
+    return;
+  }
   ctx.fillStyle = COLORS.cream;
   ctx.fillRect(24, 175, W - 48, 205);
   ctx.strokeStyle = COLORS.navy; ctx.lineWidth = 2;
   ctx.strokeRect(24, 175, W - 48, 205);
   if (state === "start") {
     drawText("FLAPPY AI JAM", 225, 32);
-    drawText("Three lives. Find your rhythm.", 270, 18);
-    drawText("Tap or press Space to flap", 315, 18);
-    drawText("It gets faster as you go", 345, 16);
+    drawText("Bird stays still; flap shifts course", 260, 15);
+    drawText("Gusts slow pillars; streaks warn", 290, 14);
+    drawText("Touch red tips for +1 point", 320, 15);
+    drawText("Tip contact won't cost a life", 350, 14);
   } else if (state === "paused") {
     drawText("PAUSED", 235, 32);
     drawText("Tap or press Space to resume", 305, 18);
@@ -281,14 +351,16 @@ function loop(timestamp) {
     accumulator += Math.min(0.05, Math.max(0, (timestamp - lastTime) / 1000));
     while (accumulator + 1e-9 >= STEP && state === "playing") {
       recovery = Math.max(0, recovery - STEP);
+      bonusFeedbackTimer = Math.max(0, bonusFeedbackTimer - STEP);
       elapsed += STEP;
+      updateWind(STEP);
       updateBird(STEP);
       if (state === "playing") updatePipes(STEP);
       accumulator = Math.max(0, accumulator - STEP);
     }
   }
   lastTime = timestamp;
-  drawBackground(); drawPipes(); drawBird(); drawUI();
+  drawBackground(); drawWindWarning(); drawPipes(); drawBird(); drawUI();
   requestAnimationFrame(loop);
 }
 addEventListener("keydown", event => {
