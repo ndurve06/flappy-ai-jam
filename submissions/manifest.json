@@ -40,6 +40,16 @@
       "track": "creative-mutation",
       "description": "Meet the boss straight away. Dash through waves that get tougher as you go. Three lives per round.",
       "prompt": "Add a Shift or on-screen dash that gives a short shield. Show a slow, clearly signalled boss wave at the start, then alternate gates and boss waves. Use three lives with brief recovery between hits, make each wave tougher, and end the demo round after 90 seconds."
+    },
+    {
+      "id": "bibiannezy",
+      "kind": "submission",
+      "title": "flappy ai jam",
+      "builder": "events lead",
+      "github": "bibiannezy",
+      "prompt": "test run",
+      "issue": 12,
+      "url": "https://share.gemini.google/Io01wkfcVmtE"
     }
   ]
 }
