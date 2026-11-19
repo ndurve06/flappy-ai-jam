@@ -42,3 +42,9 @@ export function publicGameUrl(value) {
     return "";
   }
 }
+
+export function isGeminiShare(url) {
+  return url.hostname === "share.gemini.google"
+    || (url.hostname === "gemini.google.com" && url.pathname.startsWith("/share/"))
+    || (url.hostname === "g.co" && url.pathname.startsWith("/gemini/share/"));
+}

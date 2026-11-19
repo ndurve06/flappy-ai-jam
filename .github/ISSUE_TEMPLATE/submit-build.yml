@@ -5,7 +5,7 @@ labels: ["submission"]
 body:
   - type: markdown
     attributes:
-      value: Put your game name in the title above. Only share details you want in the public gallery.
+      value: Enter your game name in the issue title above. Your team name, AI request and game link will be public.
   - type: input
     id: builder
     attributes:
@@ -25,7 +25,7 @@ body:
     id: game_url
     attributes:
       label: Link to play your game
-      description: Use the share link from Canvas or a link to your published game. Try opening it in a private browser window first.
-      placeholder: https://g.co/gemini/share/…
+      description: Paste only the link from Canvas Share → Copy link or the direct link to your published game. Check that someone can play it in a private browser window.
+      placeholder: https://share.gemini.google/…
     validations:
       required: true

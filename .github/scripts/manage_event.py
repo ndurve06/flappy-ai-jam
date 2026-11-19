@@ -1,6 +1,6 @@
 """Manage the GitHub audience ballot and publish the event's official awards."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -8,9 +8,8 @@ import re
 import subprocess
 import sys
 
-from publish_submission import HANDLE, MANIFEST, gh_json
+from publish_submission import EVENT, HANDLE, MANIFEST, gh_json, repository_writer
 
-EVENT = Path("submissions/event.json")
 BALLOT_LABEL = "audience-ballot"
 BALLOT_MARKER = "<!-- flappy-ai-jam:audience-ballot -->"
 VOTE = re.compile(r"Vote: ([a-z0-9][a-z0-9-]{0,38})", re.I | re.ASCII)
@@ -29,7 +28,7 @@ def mutate(endpoint, method, fields=()):
     return json.loads(output) if output else None
 
 
-def open_ballot(repo, event):
+def open_ballot(repo, event, paper_only=False):
     if event["state"] == "open":
         return event
     if event["state"] != "pending":
@@ -41,6 +40,9 @@ def open_ballot(repo, event):
     ]
     if not candidates:
         raise ValueError("Approve at least one game before opening the ballot.")
+
+    if paper_only:
+        return {"state": "open", "opensAt": now(), "candidates": candidates, "paperOnly": True}
 
     # A retry after creating the issue can reuse the same ballot.
     existing = api_pages(f"{repo}/issues?labels={BALLOT_LABEL}&state=all&per_page=100")
@@ -66,6 +68,10 @@ def open_ballot(repo, event):
     return {"state": "open", "issue": issue["number"], "opensAt": issue["created_at"], "candidates": candidates}
 
 
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 def timestamp(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -75,7 +81,7 @@ def parse_paper_votes(event, ballots):
     if not ballots.strip():
         return counts
     candidates = event["candidates"]
-    for item in ballots.split(","):
+    for item in re.split(r"[,;]", ballots.strip().removesuffix(",").removesuffix(";")):
         match = re.fullmatch(r"([0-9]+)\s*=\s*([0-9]+)", item.strip())
         if not match:
             raise ValueError("Enter paper votes as ballot_number=count, for example 1=4, 2=3.")
@@ -124,26 +130,32 @@ def close_ballot(repo, event, paper_votes="", technical="", creative=""):
         raise ValueError("Open the audience ballot before closing it.")
     paper_counts = parse_paper_votes(event, paper_votes)
     jury = resolve_winners(event, technical, creative) if technical.strip() or creative.strip() else {}
-    endpoint = f"{repo}/issues/{event['issue']}"
-    issue = gh_json(endpoint)
-    if not issue["locked"]:
-        mutate(endpoint + "/lock", "PUT", ("lock_reason=resolved",))
-    if issue["state"] == "open":
-        issue = mutate(endpoint, "PATCH", ("state=closed",))
-    counts, winners = tally(event, api_pages(endpoint + "/comments?per_page=100"), issue["closed_at"], paper_counts)
+    if event.get("paperOnly"):
+        closes_at, comments = now(), []
+    else:
+        endpoint = f"{repo}/issues/{event['issue']}"
+        issue = gh_json(endpoint)
+        if not issue["locked"]:
+            mutate(endpoint + "/lock", "PUT", ("lock_reason=resolved",))
+        if issue["state"] == "open":
+            issue = mutate(endpoint, "PATCH", ("state=closed",))
+        closes_at = issue["closed_at"]
+        comments = api_pages(endpoint + "/comments?per_page=100")
+    counts, winners = tally(event, comments, closes_at, paper_counts)
     return {
-        **event, "state": "closed", "closesAt": issue["closed_at"],
+        **event, "state": "closed", "closesAt": closes_at,
         "counts": counts, "awards": {"audience": winners, **jury},
     }
 
 
 def resolve_winners(event, technical, creative):
     entries = {row["id"] for row in event["candidates"]}
-    numbered = {f"#{index}": row["id"] for index, row in enumerate(event["candidates"], start=1)}
+    numbered = {str(index): row["id"] for index, row in enumerate(event["candidates"], start=1)}
     technical, creative = technical.strip().lower(), creative.strip().lower()
-    technical, creative = numbered.get(technical, technical), numbered.get(creative, creative)
+    technical = technical if technical in entries else numbered.get(technical.removeprefix("#"))
+    creative = creative if creative in entries else numbered.get(creative.removeprefix("#"))
     if technical not in entries or creative not in entries:
-        raise ValueError("Enter a build ID or a ballot number prefixed with # for both awards.")
+        raise ValueError("Enter a valid build ID or a ballot number (e.g. #2) for each of the two committee awards.")
     return {"technical": [technical], "creative": [creative]}
 
 
@@ -155,21 +167,21 @@ def set_winners(event, technical, creative):
 
 
 def main():
-    repo = "repos/" + os.environ["GITHUB_REPOSITORY"]
+    repository = os.environ["GITHUB_REPOSITORY"]
+    repo = "repos/" + repository
     with Path(os.environ["GITHUB_EVENT_PATH"]).open() as payload:
         dispatch = json.load(payload)
     sender = dispatch["sender"]
     if sender["type"] != "User" or not HANDLE.fullmatch(sender["login"]):
         raise ValueError("Event operations require a committee account with repository write access.")
-    permissions = gh_json(f"{repo}/collaborators/{sender['login']}/permission")
-    if permissions.get("permission") not in {"write", "admin"}:
+    if not repository_writer(repository, sender["login"]):
         raise ValueError("Event operations require repository write access.")
 
     event = json.loads(EVENT.read_text())
     inputs = dispatch["inputs"]
     task = inputs["operation"]
     if task == "open-voting":
-        event = open_ballot(repo, event)
+        event = open_ballot(repo, event, str(inputs.get("paper_only", "")).lower() == "true")
     elif task == "close-voting":
         event = close_ballot(
             repo, event, inputs.get("paper_votes", ""),

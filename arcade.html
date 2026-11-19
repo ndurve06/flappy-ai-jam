@@ -336,7 +336,7 @@
   <p class="sr-only" id="announcement" role="status"></p>
   <script type="module">
   import { drawQr } from "./event/qr.js";
-  import { loadManifest, publicGameUrl } from "./event/state.js";
+  import { isGeminiShare, loadManifest, publicGameUrl } from "./event/state.js";
 
   const byId = (id) => document.getElementById(id);
   const STORAGE_KEY = "flappy-ai-jam.arcade.v1";
@@ -352,12 +352,12 @@
     "Describe one change at a time. Play a round before asking for the next one.",
     "Tell Gemini what should stay the same: controls, collision and scoring.",
     "Give a concrete example of how a flap, near miss or restart should feel.",
-    "Ask Gemini for the whole HTML file so you can replace your old version in one paste.",
+    "If Gemini loses a change, start a fresh Canvas chat using your last working HTML.",
     "If a change breaks the game, paste the error and ask Gemini to fix that one issue.",
     "Save the last working version before trying a bigger change.",
     "Give the agent a quick test: after a collision, one tap should start a fresh round.",
     "Ask the agent to point out which part of the game it changed. Check that part first.",
-    "Test your share link in a private tab before you submit it."
+    "Check that your share link plays in a private tab. Hand in from 19:05."
   ];
 
   function loadState() {
@@ -460,7 +460,7 @@
     if (byId("clock-note").textContent !== note) byId("clock-note").textContent = note;
     byId("play").disabled = timer.end !== null || !seconds;
     byId("pause").disabled = timer.end === null;
-    renderParticipantQr(seconds <= 300);
+    renderParticipantQr(seconds <= 600);
   }
 
   byId("play").addEventListener("click", () => {
@@ -788,7 +788,13 @@
     const entry = activeEntry();
     const file = localFiles.get(activeId);
     const url = entry?.kind === "url" ? entry.source : "";
-    byId("stage-empty").hidden = Boolean(url || file);
+    const external = url && isGeminiShare(new URL(url));
+    byId("stage-empty").hidden = Boolean((url || file) && !external);
+    if (external) {
+      byId("stage-title").textContent = entry.title;
+      byId("stage-note").textContent = "Choose Open in new tab to play this Canvas share.";
+      return;
+    }
     if (!url && !file) {
       byId("stage-title").textContent = entry ? "Reattach this game" : "Ready for a demo";
       byId("stage-note").textContent = entry ? "Choose the original HTML file to play it again." : "Add a game from the sidebar.";
@@ -847,7 +853,7 @@
     byId("builder").textContent = entry ? entry.builder || "Builder name pending" : "Select a build from the queue.";
     byId("build-actions").hidden = !entry;
     byId("reattach").hidden = !needsFile;
-    byId("reload-game").hidden = !entry || needsFile;
+    byId("reload-game").hidden = !entry || needsFile || (isLink && isGeminiShare(new URL(entry.source)));
     byId("embed-note").hidden = !isLink;
     byId("external").hidden = !isLink;
     if (isLink) byId("external").href = entry.source;

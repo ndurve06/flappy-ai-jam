@@ -129,7 +129,8 @@ legend { font-weight: 600; margin-bottom: .65rem; }
 .choices { display: grid; gap: .55rem; }
 .choice { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .65rem; padding: .65rem; border: 1px solid var(--line); border-radius: .4rem; }
 .choice:has(:checked) { border-color: var(--cream); background: var(--deep); }
-.choice label { cursor: pointer; overflow-wrap: anywhere; }
+.choice label { cursor: pointer; }
+.choice label, .choice span { overflow-wrap: anywhere; }
 .choice small { display: block; color: var(--muted); }
 .choice input { accent-color: var(--cream); }
 .vote-code { margin-top: 1rem; }
