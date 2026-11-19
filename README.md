@@ -41,7 +41,7 @@ If you want a public game link of your own, you can publish a copy from a web br
 
 ## No GitHub account?
 
-From 19:05, bring your game link, game name, team name and the request you sent to AI to the help desk. The committee can submit it for you. If sharing fails, bring your working preview or game file for a live demo. Ask for a paper slip to vote in the room.
+From 19:05, bring your finished HTML file or playable game link, game name, team name and the request you sent to AI to the help desk. The committee can submit it for you. If sharing fails, bring your working preview or game file for a live demo. Ask for a paper slip to vote in the room.
 
 ## Repository architecture
 
@@ -137,11 +137,12 @@ Fix only that bug, keep every feature, and return the FULL working index.html.
 
 ## Submission and judging
 
-Use **Share & export → Share → Copy link** from your Gemini Canvas game. Open the link in a private browser window and check that it plays while you’re signed out. On a phone, open it in your browser.
+Hand in at the help desk from 19:05, or use [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) with a GitHub account. Include the game title, team name and main AI request.
 
-Hand it in at the help desk from 19:05, or use [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) with a GitHub account. A playable Canvas share link, GitHub Pages URL, or another public HTTPS game link works. Your game, display name and AI request appear in the public gallery after review. Check your issue for the gallery link or feedback.
+- **Single-file game.** Bring your finished `index.html`, or paste its full contents into the form. A checked HTML export is the version the gallery plays. You can also include the Canvas share link using **Share & export → Share → Copy link**.
+- **Multi-file game.** Submit the live GitHub Pages URL, such as `https://your-username.github.io/your-game/`, or another public URL that opens the game. Test it while signed out. The link route also works for an HTML file above the form’s 50,000-character limit.
 
-If the gallery preview is blocked, select **Open game in new tab**. If the shared link still won’t play on the projector, bring the working preview or save the full game code as `index.html` and bring that file. For an update, tell the help desk or file a new issue online. The newest approved online submission per GitHub account owns that account’s gallery link.
+Your game, team name, AI request, and any submitted code or link are public after review. Check your issue for the gallery link or feedback. For an update, tell the help desk or file a new issue online. The newest approved online submission per GitHub account owns that account’s gallery link.
 
 | Category | What it rewards | How we judge it |
 | --- | --- | --- |

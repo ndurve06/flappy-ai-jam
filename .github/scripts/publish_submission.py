@@ -9,6 +9,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 MANIFEST = Path("submissions/manifest.json")
+GAMES = MANIFEST.parent / "games"
+MAX_HTML_LENGTH = 50_000
 HANDLE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?", re.I | re.ASCII)
 LEGACY_LABELS = (
     "Build Title",
@@ -19,6 +21,7 @@ LEGACY_LABELS = (
     "Game URL",
 )
 LABELS = ("Name or team name", "What did you ask the AI to change?", "Link to play your game")
+HTML_LABEL = "Single-file HTML"
 TRACKS = {
     "Technical Execution": "technical-execution",
     "Game Feel": "game-feel",
@@ -95,6 +98,20 @@ def extract_fields(body, labels):
     return values
 
 
+def parse_game_html(value):
+    if value in {"", "_No response_"}:
+        return ""
+    fenced = re.fullmatch(r"(`{3,}|~{3,})(?:html)?[ \t]*\n(.*)\n\1", value, re.I | re.S)
+    html = (fenced[2] if fenced else value).strip().removeprefix("\ufeff")
+    if html in {"", "_No response_"}:
+        return ""
+    if len(html) > MAX_HTML_LENGTH:
+        raise ValueError("The HTML is over 50,000 characters. Submit a public game link instead.")
+    if not re.match(r"(?:<!doctype html\s*>|<html[\s>])", html, re.I) or not re.search(r"</html>\s*$", html, re.I):
+        raise ValueError("Paste the complete single-file HTML from the doctype or opening HTML tag to </html>.")
+    return html + "\n"
+
+
 def parse_submission(issue, repository):
     github = issue["user"]["login"]
     if issue["user"]["type"] != "User" or not HANDLE.fullmatch(github):
@@ -109,6 +126,7 @@ def parse_submission(issue, repository):
     body = issue["body"] or ""
     legacy = body.lstrip().startswith("### Build Title\n") or body.lstrip().startswith("### Build Title\r\n")
     extras = {}
+    html = ""
     if legacy:
         title, builder, linkedin, track, prompt, game_url = extract_fields(body, LEGACY_LABELS)
         if track not in TRACKS:
@@ -120,7 +138,11 @@ def parse_submission(issue, repository):
                 raise ValueError("The optional LinkedIn URL must use linkedin.com.")
             extras["linkedin"] = linkedin_url
     else:
-        builder, prompt, game_url = extract_fields(body, LABELS)
+        if f"\n### {HTML_LABEL}\n" in body.replace("\r\n", "\n"):
+            builder, prompt, game_url, source = extract_fields(body, (*LABELS, HTML_LABEL))
+            html = parse_game_html(source)
+        else:
+            builder, prompt, game_url = extract_fields(body, LABELS)
         title = issue["title"].removeprefix("[Game]").strip()
     if not (0 < len(title) <= 100 and 0 < len(builder) <= 100 and 0 < len(prompt) <= 1500
             and all(value != "_No response_" for value in (title, builder, prompt))
@@ -128,20 +150,26 @@ def parse_submission(issue, repository):
         raise ValueError("Check the game title, team name and your AI request.")
     row = {
         "id": identifier, "kind": "submission", "title": title, "builder": builder,
-        "github": github, "prompt": prompt, "issue": issue["number"],
-        "url": public_game_url(game_url), **extras,
+        "github": github, "prompt": prompt, "issue": issue["number"], **extras,
     }
+    if game_url not in {"", "_No response_"}:
+        row["url"] = public_game_url(game_url)
+    if html:
+        row["html"] = True
+    if not html and "url" not in row:
+        raise ValueError("Give a public link to play the game or paste the complete single-file HTML.")
     if assisted:
         row["assisted"] = True
-    return row
+    return row, html
 
 
-def record_submission(row):
+def record_submission(row, html):
     manifest = json.loads(MANIFEST.read_text())
     if manifest.get("version") != 1 or not isinstance(manifest.get("builds"), list):
         raise ValueError("The existing manifest must use schema version 1.")
     rows = manifest["builds"]
     identifier = row["id"]
+    previous_file = None
     for index, current in enumerate(rows):
         # Replace the old row if an already-published issue is corrected to assisted.
         if current["id"] != identifier and current.get("issue") != row["issue"]:
@@ -152,10 +180,18 @@ def record_submission(row):
             raise ValueError("A newer submission from this GitHub account is already in the gallery.")
         if current.get("winner") is True:
             row["winner"] = True
+        if current.get("html") is True:
+            previous_file = GAMES / f"{current['issue']}.txt"
         rows[index] = row
         break
     else:
         rows.append(row)
+    game_file = GAMES / f"{row['issue']}.txt" if html else None
+    if game_file:
+        GAMES.mkdir(exist_ok=True)
+        game_file.write_text(html, encoding="utf-8")
+    if previous_file and previous_file != game_file:
+        previous_file.unlink(missing_ok=True)
     MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
@@ -205,8 +241,8 @@ def publish_assisted(repository, numbers):
 
 
 def publish_row(issue, repository):
-    row = parse_submission(issue, repository)
-    record_submission(row)
+    row, html = parse_submission(issue, repository)
+    record_submission(row, html)
     return row["id"]
 
 

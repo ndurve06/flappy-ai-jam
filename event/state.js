@@ -48,3 +48,23 @@ export function isGeminiShare(url) {
     || (url.hostname === "gemini.google.com" && url.pathname.startsWith("/share/"))
     || (url.hostname === "g.co" && url.pathname.startsWith("/gemini/share/"));
 }
+
+export function publishedGamePath(build) {
+  return build.html === true && Number.isSafeInteger(build.issue) && build.issue > 0
+    ? `submissions/games/${build.issue}.txt` : "";
+}
+
+export async function loadPublishedGame(path) {
+  if (!/^submissions\/games\/[1-9][0-9]*\.txt$/.test(path)) throw new Error("Invalid game path");
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) throw new Error("Game file unavailable");
+  return response.text();
+}
+
+export function standaloneGameDocument(html) {
+  // Place the policy before any submitted markup, and keep standards mode.
+  const policy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+    + "img-src data: blob:; media-src data: blob:; font-src data:; base-uri 'none'; form-action 'none'";
+  const body = html.replace(/^\s*<!doctype html\s*>/i, "");
+  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}">${body}`;
+}

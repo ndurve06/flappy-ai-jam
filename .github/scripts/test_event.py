@@ -25,6 +25,14 @@ def issue(number, login, url, *labels):
     }
 
 
+def with_html(submission, html):
+    submission["body"] += f"\n\n### Single-file HTML\n\n```html\n{html}\n```"
+    return submission
+
+
+GAME = "<!doctype html><html><script>document.title = 'Hello'</script></html>"
+
+
 class SubmissionTest(unittest.TestCase):
     repository = "uopaisociety/flappy-ai-jam"
 
@@ -37,6 +45,7 @@ class SubmissionTest(unittest.TestCase):
         event.write_text('{"state":"pending"}')
         for target, value in [
             ("MANIFEST", manifest),
+            ("GAMES", Path(temp.name) / "games"),
             ("EVENT", event),
             ("repository_writer", lambda _repo, login: login == "Desk"),
         ]:
@@ -52,7 +61,8 @@ class SubmissionTest(unittest.TestCase):
             "https://user.github.io/game/",
         ]:
             with self.subTest(url=url):
-                entry = publish.parse_submission(issue(1, "Player", url), self.repository)
+                entry, html = publish.parse_submission(issue(1, "Player", url), self.repository)
+                self.assertEqual(html, "")
                 self.assertTrue(entry["url"].startswith("https://"))
         for url in [
             "https://gemini.google.com/app/private",
@@ -65,6 +75,41 @@ class SubmissionTest(unittest.TestCase):
         ]:
             with self.subTest(url=url), self.assertRaises(ValueError):
                 publish.parse_submission(issue(1, "Player", url), self.repository)
+
+    def test_file_only_and_hosted_games_share_one_ballot(self):
+        file_only = with_html(issue(21, "Desk", "_No response_", "committee-assisted"), GAME)
+        pages = with_html(issue(22, "Desk", "https://team.github.io/project/", "committee-assisted"), "")
+        both = with_html(issue(23, "Desk", "https://share.gemini.google/original", "committee-assisted"), GAME)
+        with patch.object(publish, "gh_json", side_effect=[file_only, pages, both]):
+            results = publish.publish_assisted(self.repository, "21, 22, 23")
+        ids = ["entry--21", "entry--22", "entry--23"]
+        self.assertEqual([result["build"] for result in results], ids)
+        rows = json.loads(publish.MANIFEST.read_text())["builds"]
+        self.assertTrue(rows[0]["html"])
+        self.assertNotIn("url", rows[0])
+        self.assertEqual(rows[1]["url"], "https://team.github.io/project/")
+        self.assertNotIn("html", rows[1])
+        self.assertTrue(rows[2]["html"])
+        self.assertEqual(rows[2]["url"], "https://share.gemini.google/original")
+        self.assertEqual(sorted(p.name for p in publish.GAMES.iterdir()), ["21.txt", "23.txt"])
+        self.assertEqual((publish.GAMES / "21.txt").read_text(), GAME + "\n")
+        with patch.object(ballot, "MANIFEST", publish.MANIFEST):
+            event = ballot.open_ballot("unused", {"state": "pending"}, paper_only=True)
+        self.assertEqual([candidate["id"] for candidate in event["candidates"]], ids)
+        self.assertEqual(ballot.close_ballot("unused", event, "1=5")["awards"]["audience"], ["entry--21"])
+
+    def test_invalid_html_and_missing_input_are_rejected(self):
+        for source in ("<script>alert(1)</script>", "<html>" + " " * 50_000 + "</html>", ""):
+            with self.subTest(size=len(source)), self.assertRaises(ValueError):
+                publish.publish_row(with_html(issue(5, "Player", "_No response_"), source), self.repository)
+        self.assertEqual(json.loads(publish.MANIFEST.read_text())["builds"], [])
+
+    def test_newer_link_only_version_cleans_up_old_html(self):
+        publish.publish_row(with_html(issue(1, "Player", "_No response_"), GAME), self.repository)
+        publish.publish_row(issue(2, "Player", "https://team.github.io/project/"), self.repository)
+        self.assertFalse((publish.GAMES / "1.txt").exists())
+        rows = json.loads(publish.MANIFEST.read_text())["builds"]
+        self.assertEqual([(row["id"], row["issue"]) for row in rows], [("player", 2)])
 
     def test_missing_assisted_label_cannot_overwrite_game(self):
         url = "https://example.com/game"

@@ -336,7 +336,9 @@
   <p class="sr-only" id="announcement" role="status"></p>
   <script type="module">
   import { drawQr } from "./event/qr.js";
-  import { isGeminiShare, loadManifest, publicGameUrl } from "./event/state.js";
+  import {
+    isGeminiShare, loadManifest, loadPublishedGame, publicGameUrl, publishedGamePath, standaloneGameDocument,
+  } from "./event/state.js";
 
   const byId = (id) => document.getElementById(id);
   const STORAGE_KEY = "flappy-ai-jam.arcade.v1";
@@ -385,7 +387,6 @@
   let editId = null;
   let pendingLink = null;
   let frame = null;
-  let frameUrl = null;
   let replacementId = null;
   let photoMode = false;
   const localFiles = new Map();
@@ -576,22 +577,44 @@
     button.disabled = true;
     try {
       const builds = await loadManifest();
-      const existing = new Set(entries.filter((entry) => entry.kind === "url").map((entry) => entry.source));
       const added = [];
+      let updated = 0;
+      let activeChanged = false;
       for (const build of builds) {
         if (build?.kind !== "submission") continue;
+        const source = publishedGamePath(build);
         const url = publicGameUrl(build.url);
-        if (url && !existing.has(url)) {
-          added.push(addEntry("url", url, build.title, build.builder));
-          existing.add(url);
+        if (!source && !url) continue;
+        const kind = source ? "published" : "url";
+        const destination = source || url;
+        const current = entries.find((entry) =>
+          entry.buildId === build.id || (url && entry.kind === "url" && entry.source === url));
+        if (current) {
+          if (current.kind !== kind || current.source !== destination || current.url !== url) {
+            Object.assign(current, { kind, source: destination, url });
+            updated++;
+            activeChanged ||= current.id === activeId;
+          }
+          current.buildId = build.id;
+          continue;
         }
+        const entry = addEntry(kind, destination, build.title, build.builder);
+        Object.assign(entry, { url, buildId: build.id });
+        added.push(entry);
       }
-      note.textContent = added.length ? "Queued " + added.length + " approved " + (added.length === 1 ? "build." : "builds.")
-        : "No new approved builds to queue.";
+      note.textContent = [
+        added.length ? "Queued " + added.length + " approved " + (added.length === 1 ? "build." : "builds.") : "",
+        updated ? "Updated " + updated + " queued " + (updated === 1 ? "build." : "builds.") : "",
+      ].filter(Boolean).join(" ") || "No new approved builds to queue.";
       if (added.length && !activeId) selectEntry(added[0]);
       else {
         persist();
-        renderQueue();
+        if (activeChanged) {
+          renderShowcase();
+          void mountGame();
+        } else {
+          renderQueue();
+        }
       }
     } catch {
       note.textContent = "Could not load approved builds. Try again or paste a link below.";
@@ -747,7 +770,7 @@
       const details = document.createElement("span");
       details.className = "small";
       const status = entry.scores.every((score) => score !== null) ? sum(entry) + "/15"
-        : entry.kind === "url" ? "Link" : localFiles.has(entry.id) ? "HTML" : "Reattach HTML";
+        : entry.kind === "url" ? "Link" : entry.kind === "published" || localFiles.has(entry.id) ? "HTML" : "Reattach HTML";
       details.textContent = entry.builder ? entry.builder + " · " + status : status;
       pick.append(title, details);
       pick.addEventListener("click", () => {
@@ -779,37 +802,52 @@
   function clearGame() {
     frame?.remove();
     frame = null;
-    if (frameUrl) URL.revokeObjectURL(frameUrl);
-    frameUrl = null;
   }
 
-  function mountGame() {
+  async function mountGame() {
     clearGame();
     const entry = activeEntry();
     const file = localFiles.get(activeId);
+    const source = entry?.kind === "published" ? entry.source : "";
     const url = entry?.kind === "url" ? entry.source : "";
     const external = url && isGeminiShare(new URL(url));
-    byId("stage-empty").hidden = Boolean((url || file) && !external);
+    const stageEmpty = byId("stage-empty");
+    stageEmpty.hidden = Boolean((url || file || source) && !external);
     if (external) {
       byId("stage-title").textContent = entry.title;
       byId("stage-note").textContent = "Choose Open in new tab to play this Canvas share.";
       return;
     }
-    if (!url && !file) {
+    if (!url && !file && !source) {
       byId("stage-title").textContent = entry ? "Reattach this game" : "Ready for a demo";
       byId("stage-note").textContent = entry ? "Choose the original HTML file to play it again." : "Add a game from the sidebar.";
       return;
     }
-    frame = document.createElement("iframe");
-    frame.title = entry.title;
-    frame.width = "480";
-    frame.height = "640";
-    frame.setAttribute("sandbox", "allow-scripts");
-    frame.referrerPolicy = "no-referrer";
-    frame.setAttribute("allow", "autoplay 'src'");
-    if (file) frameUrl = URL.createObjectURL(new Blob([file], { type: "text/html;charset=utf-8" }));
-    frame.src = frameUrl ?? url;
-    byId("stage").append(frame);
+    const preview = document.createElement("iframe");
+    preview.title = entry.title;
+    preview.width = "480";
+    preview.height = "640";
+    preview.setAttribute("sandbox", "allow-scripts");
+    preview.referrerPolicy = "no-referrer";
+    preview.setAttribute("allow", "autoplay 'src'; microphone 'none'; camera 'none'");
+    frame = preview;
+    try {
+      if (file || source) {
+        stageEmpty.hidden = false;
+        byId("stage-title").textContent = entry.title;
+        byId("stage-note").textContent = "Loading game…";
+        const html = file ? await file.text() : await loadPublishedGame(source);
+        if (frame !== preview) return;
+        preview.srcdoc = standaloneGameDocument(html);
+      } else {
+        preview.src = url;
+      }
+      byId("stage").append(preview);
+      stageEmpty.hidden = true;
+    } catch {
+      if (frame !== preview) return;
+      byId("stage-note").textContent = "The HTML couldn’t load. Try reloading the game or use its original link.";
+    }
   }
   byId("reload-game").addEventListener("click", mountGame);
 
@@ -848,6 +886,7 @@
   function renderShowcase() {
     const entry = activeEntry();
     const isLink = entry?.kind === "url";
+    const externalUrl = isLink ? entry.source : publicGameUrl(entry?.url);
     const needsFile = entry?.kind === "file" && !localFiles.has(entry.id);
     byId("build-title").textContent = entry?.title ?? "Arcade Showcase";
     byId("builder").textContent = entry ? entry.builder || "Builder name pending" : "Select a build from the queue.";
@@ -855,8 +894,9 @@
     byId("reattach").hidden = !needsFile;
     byId("reload-game").hidden = !entry || needsFile || (isLink && isGeminiShare(new URL(entry.source)));
     byId("embed-note").hidden = !isLink;
-    byId("external").hidden = !isLink;
-    if (isLink) byId("external").href = entry.source;
+    byId("external").hidden = !externalUrl;
+    byId("external").textContent = isLink ? "Open in new tab ↗︎" : "Open original link ↗︎";
+    if (externalUrl) byId("external").href = externalUrl;
     else byId("external").removeAttribute("href");
     renderScoring();
     renderQueue();
@@ -938,7 +978,7 @@
   function exportRows() {
     return rankedEntries().map(({ entry, rank, score }) => ({
       rank, title: entry.title, builder: entry.builder,
-      url: entry.kind === "url" ? entry.source : null,
+      url: (entry.kind === "url" ? entry.source : entry.url) || null,
       technicalExecution: entry.scores[0], gameFeel: entry.scores[1], creativity: entry.scores[2],
       total: score, applause: entry.applause
     }));

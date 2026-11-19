@@ -10,7 +10,7 @@
 - Set up a shared hand-in log with the headers below. Keep it open on both desk laptops and on the projector laptop. Use a team display name and check the team agrees to publish its details.
 
 ```text
-Paper number    Team    Game title    AI request    Game link or local file    Issue #    Status
+Paper number    Team    Game title    AI request    Game link or HTML file    Issue #    Status
 ```
 
 ## In the room
@@ -19,21 +19,22 @@ Paper number    Team    Game title    AI request    Game link or local file    I
 | --- | --- |
 | 18:30–18:45 | Show the setup QR. Play one round, show the **Copy starter prompt** button and check people can flap and restart in Canvas Preview. |
 | 18:45–19:05 | Start the 30-minute timer. Encourage one small change and a playtest. |
-| 19:05–19:25 | When the QR switches to hand-in, check links and start the desk log. Accept working previews or local files for demos. |
+| 19:05–19:25 | When the QR switches to hand-in, check links and start the desk log. Accept a finished HTML file or a playable public link. Keep working previews available for demos. |
 | 19:25–19:45 | Demo from the log. Use **Demo queue → Queue link** or attach a local HTML file. Open Canvas shares in a browser tab. |
 | 19:45–19:52 | Run the vote. Choose the paper fallback below if publishing is still catching up. |
 | 19:52–20:00 | Count the slips, announce the awards and publish the results if the gallery is ready. |
 
 ## Hand in, review and publish
 
-1. Play each link in a private browser window. Ask for the link from **Share → Copy link** if someone provides their private Gemini chat. Log the team, title, short AI request and link while the attendee is with you.
-2. For help-desk entries, use the [committee-assisted issue form](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=committee-assisted.yml). It applies `submission` and `committee-assisted` together. For existing committee issues, add `committee-assisted` before approving. Each assisted game gets its own `entry--<issue-number>` ID.
-3. When several assisted issues are ready, run `publish-assisted` on `main` and enter the issue numbers, for example `12, 13, 14`. This publishes the checked games with one Pages deployment. For one assisted entry or a standard participant issue, a writer can apply `approved` after review.
-4. Check **Actions** and the issue. The bot puts the gallery link or validation feedback on the issue. If something needs editing, fix it, then remove and reapply `approved` or resubmit the issue number in a batch. Demo directly from the log if Pages is still deploying. Keep a submission issue open until its game appears. Closing it after publication preserves the gallery entry and moves the thread to the [Closed list](https://github.com/uopaisociety/flappy-ai-jam/issues?q=is%3Aissue+is%3Aclosed).
+1. Log the team, title, short AI request and the playable version. Test self-contained HTML with **Demo queue → Add HTML**. For a multi-file project, open the live GitHub Pages or other public game URL in a private window and play a round. Check the team agrees to publish the game and any supplied code.
+2. File a [committee-assisted issue](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=committee-assisted.yml). Paste the full code into **Single-file HTML**, enter a playable link, or supply both. A checked HTML export is played first when both are supplied. The form applies `submission` and `committee-assisted` together. Each assisted game gets its own `entry--<issue-number>` ID. Record the issue number in the desk log.
+3. When several assisted issues are ready, run `publish-assisted` on `main` and enter the checked issue numbers. This publishes the batch with one Pages deployment. For one assisted entry or a standard participant issue, a writer can apply `approved` after review.
+4. Check **Actions** and the issue for a gallery link or feedback. Fix and retry any flagged entry. Demo from the desk log during deployment. Keep an issue open until the entry appears. Closing it afterwards preserves the gallery entry and moves the thread to the [Closed list](https://github.com/uopaisociety/flappy-ai-jam/issues?q=is%3Aissue+is%3Aclosed).
 
 ## Vote and publish awards
 
 The live test submission took 57 seconds from approval to the bot’s gallery reply. Allow about a minute each for opening the online ballot and publishing results once the queue is free. If the room is ready to vote while Pages is still updating, use the numbered desk log and paper slips.
+
 - **Gallery ready.** Once all eligible games appear, run `open-voting` to freeze the list. Project the [ballot and game numbers](https://uopaisociety.github.io/flappy-ai-jam/vote.html?projector). Tick `paper_only` when opening if everyone in the room will vote on paper. In a mixed ballot, ask each attendee to choose paper or GitHub and give out one slip per person.
 - **Gallery still updating.** Give each eligible game a fixed number in the desk log, display the numbered game list and take one paper vote per person. Keep the tally and announce the result in the room. Once the gallery is ready, run `open-voting` with `paper_only` enabled. Match each team's paper number to the corresponding build in the workflow's ballot list before entering the tally. Keep the room result in the log if a winner's game could only be shown locally.
 - **Close and publish.** Run `close-voting`. Enter totals as `1=4, 2=3` using the numbers printed by `open-voting`. Enter both committee award picks as `#2` or a build ID, or leave both blank and run `publish-winners` later. A tie shares People’s Choice. If there are no eligible games, skip the ballot.
