@@ -72,8 +72,10 @@ These comments in the file mark the parts Gemini should keep. They appear in thi
 
 1. Open the [participant guide](https://uopaisociety.github.io/flappy-ai-jam/showcase.html#setup) and select **Copy starter prompt**.
 2. Open [Gemini](https://gemini.google.com) in your browser and choose **Canvas** near the message box.
-3. Paste into the chat and send it. Open **Preview** and play a round.
+3. With **Canvas** selected, paste into the chat and send it. Open **Preview** and play a round.
 4. Ask for one change in the same chat and play again.
+
+If Gemini replies with code in the chat, start a fresh Canvas chat and paste the prompt again. You can also [download the starter HTML](https://uopaisociety.github.io/flappy-ai-jam/index.html) and copy its contents from a text editor.
 
 **On your own computer (optional).** Gemini Canvas is still the route for the evening. This path is only if you already work on your own machine.
 
@@ -139,7 +141,7 @@ Use **Share & export → Share → Copy link** from your Gemini Canvas game. Ope
 
 Hand it in at the help desk from 19:05, or use [Submit Your Build](https://github.com/uopaisociety/flappy-ai-jam/issues/new?template=submit-build.yml) with a GitHub account. A playable Canvas share link, GitHub Pages URL, or another public HTTPS game link works. Your game, display name and AI request appear in the public gallery after review. Check your issue for the gallery link or feedback.
 
-If the gallery preview is blocked, select **Open game in new tab**. For an update, tell the help desk or file a new issue online. The newest approved online submission per GitHub account owns that account’s gallery link.
+If the gallery preview is blocked, select **Open game in new tab**. If the shared link still won’t play on the projector, bring the working preview or save the full game code as `index.html` and bring that file. For an update, tell the help desk or file a new issue online. The newest approved online submission per GitHub account owns that account’s gallery link.
 
 | Category | What it rewards | How we judge it |
 | --- | --- | --- |
